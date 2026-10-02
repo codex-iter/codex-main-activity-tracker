@@ -80,3 +80,136 @@ export async function getDailyLeaderboard(): Promise<LeaderboardEntry[]> {
 
   return (data ?? []) as unknown as LeaderboardEntry[];
 }
+
+// ── Club Activity Map ──────────────────────────────────────────────────────
+
+/** Shape required by react-activity-calendar */
+export interface ActivityDay {
+  date: string;           // "YYYY-MM-DD"
+  count: number;
+  level: 0 | 1 | 2 | 3 | 4;
+}
+
+/**
+ * Maps a raw count to a level 0-4 relative to the max count in the dataset.
+ *  0 → no activity
+ *  1-4 → quartile-based intensity
+ */
+function countToLevel(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
+  if (count === 0 || max === 0) return 0;
+  const ratio = count / max;
+  if (ratio <= 0.25) return 1;
+  if (ratio <= 0.5)  return 2;
+  if (ratio <= 0.75) return 3;
+  return 4;
+}
+
+/**
+ * Fetches the pre-aggregated `club_daily_activity` view from Supabase
+ * and returns data formatted for `react-activity-calendar`.
+ *
+ * View shape: { date: string, count: number }
+ */
+export async function getClubActivityMap(): Promise<ActivityDay[]> {
+  const { data, error } = await supabase
+    .from("club_daily_activity")
+    .select("date, count")
+    .order("date", { ascending: true });
+
+  if (error) {
+    console.error("[codexApi] getClubActivityMap error:", error.message);
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as { date: string; count: number }[];
+  const max = Math.max(0, ...rows.map((r) => r.count));
+
+  return rows.map((r) => ({
+    date: r.date,
+    count: r.count,
+    level: countToLevel(r.count, max),
+  }));
+}
+
+// ── Member Profile ─────────────────────────────────────────────────────────
+
+export interface MemberProfile {
+  id: string;
+  full_name: string;
+  roll_number: string | null;
+  avatar_url: string | null;
+  github_handle: string | null;
+  linkedin_url: string | null;
+  portfolio_url: string | null;
+  snapshot: {
+    snapshot_date: string;
+    total_score: number;
+    active_days: number;
+    current_streak: number;
+    max_streak: number;
+    leetcode_easy: number;
+    leetcode_medium: number;
+    leetcode_hard: number;
+    leetcode_total: number;
+    gfg_school: number;
+    gfg_basic: number;
+    gfg_easy: number;
+    gfg_medium: number;
+    gfg_hard: number;
+    github_contributions: number;
+    codeforces_rating: number;
+    codechef_rating: number;
+    hackerrank_badges: number;
+    contests_attended: number;
+    topic_stats: Record<string, number> | null;
+    badges_detail: Record<string, unknown> | null;
+  } | null;
+}
+
+/**
+ * Fetches a member profile by github_handle (tried first) or roll_number,
+ * along with their most recent activity_snapshot row.
+ */
+export async function getMemberProfile(handle: string): Promise<MemberProfile | null> {
+  for (const field of ["github_handle", "roll_number"] as const) {
+    const { data: members, error } = await supabase
+      .from("members")
+      .select(
+        "id, full_name, roll_number, avatar_url, github_handle, linkedin_url, portfolio_url"
+      )
+      .eq(field, handle)
+      .limit(1);
+
+    if (error) {
+      console.error("[codexApi] getMemberProfile error:", error.message);
+      throw new Error(error.message);
+    }
+
+    if (!members || members.length === 0) continue;
+
+    const member = members[0] as Omit<MemberProfile, "snapshot">;
+
+    const { data: snapshots } = await supabase
+      .from("activity_snapshots")
+      .select(
+        `snapshot_date, total_score, active_days, current_streak, max_streak,
+         leetcode_easy, leetcode_medium, leetcode_hard, leetcode_total,
+         gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard,
+         github_contributions, codeforces_rating, codechef_rating,
+         hackerrank_badges, contests_attended, topic_stats, badges_detail`
+      )
+      .eq("member_id", member.id)
+      .order("snapshot_date", { ascending: false })
+      .limit(1);
+
+    return {
+      ...member,
+      snapshot:
+        snapshots && snapshots.length > 0
+          ? (snapshots[0] as MemberProfile["snapshot"])
+          : null,
+    };
+  }
+
+  return null;
+}

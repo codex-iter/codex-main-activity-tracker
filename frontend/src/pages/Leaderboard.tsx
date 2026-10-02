@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "../components/animations/ScrollReveal";
 import SEO from "../components/SEO";
 import { getDailyLeaderboard, type LeaderboardEntry } from "../services/codexApi";
+import ClubActivityCalendar from "../components/ClubActivityCalendar";
 
 // ── Rank badge colours ────────────────────────────────────────────────────
 
@@ -46,11 +48,15 @@ function LeaderboardRow({
       member.full_name ?? "?"
     )}&backgroundColor=0707f2&textColor=ffffff`;
 
-  return (
+  const profileHref = member.github_handle
+    ? `/profile/${member.github_handle}`
+    : null;
+
+  const inner = (
     <motion.div
       whileHover={{ x: 3, y: -3 }}
       transition={{ duration: 0.15 }}
-      className="flex items-center gap-4 bg-white border-4 border-slate-900 p-4 brutalist-shadow-hover transition-all duration-200 group"
+      className="flex items-center gap-4 bg-white border-4 border-slate-900 p-4 brutalist-shadow-hover transition-all duration-200 group cursor-pointer"
     >
       {/* Rank badge */}
       <div
@@ -78,23 +84,17 @@ function LeaderboardRow({
           {member.full_name ?? "—"}
         </h3>
         {member.github_handle && (
-          <a
-            href={`https://github.com/${member.github_handle}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-bold text-primary hover:underline mt-0.5 inline-block"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <span className="text-xs font-bold text-primary mt-0.5 inline-block">
             @{member.github_handle}
-          </a>
+          </span>
         )}
       </div>
 
       {/* Stats */}
       <div className="hidden sm:flex items-center gap-2 flex-wrap justify-end">
-        <StatPill label="Score"   value={entry.total_score.toFixed(0)} />
-        <StatPill label="LC"      value={entry.leetcode_total} />
-        <StatPill label="Streak"  value={`${entry.current_streak}d`} />
+        <StatPill label="Score"    value={entry.total_score.toFixed(0)} />
+        <StatPill label="LC"       value={entry.leetcode_total} />
+        <StatPill label="Streak"   value={`${entry.current_streak}d`} />
         <StatPill label="Contests" value={entry.contests_attended} />
       </div>
 
@@ -104,6 +104,12 @@ function LeaderboardRow({
         <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">pts</span>
       </div>
     </motion.div>
+  );
+
+  return profileHref ? (
+    <Link to={profileHref} className="block">{inner}</Link>
+  ) : (
+    inner
   );
 }
 
@@ -233,8 +239,13 @@ export default function Leaderboard() {
           </p>
         </ScrollReveal>
 
+        {/* ── Club Activity Calendar ── */}
+        <ScrollReveal delay={0.08} className="mb-14">
+          <ClubActivityCalendar />
+        </ScrollReveal>
+
         {/* ── Date strip ── */}
-        <ScrollReveal delay={0.08} className="mb-8">
+        <ScrollReveal delay={0.12} className="mb-8">
           <div className="flex items-center gap-4">
             <div className="h-px flex-1 bg-slate-900" />
             <span className="font-bold uppercase text-sm tracking-widest text-slate-500 whitespace-nowrap">
