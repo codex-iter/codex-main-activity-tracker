@@ -16,6 +16,7 @@ const NAV_LINKS = [
   { to: "/events", label: "Events" },
   { to: "/projects", label: "Projects" },
   { to: "/team", label: "Team" },
+  { to: "/leaderboard", label: "Leaderboard" },
 ];
 
 export default function Navbar() {

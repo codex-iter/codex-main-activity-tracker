@@ -14,6 +14,7 @@ import AmbientBackground from "./components/animations/AmbientBackground"
 import { CustomScrollbar } from "./components/ui/CustomScrollbar"
 
 import Projects from "./pages/Projects"
+import Leaderboard from "./pages/Leaderboard"
 
 // Inner component so useLocation works inside Router
 function AnimatedRoutes() {
@@ -30,6 +31,7 @@ function AnimatedRoutes() {
           <Route path="/projects" element={<PageTransition><Projects /></PageTransition>} />
           <Route path="/team" element={<PageTransition><Team /></PageTransition>} />
           <Route path="/blogs/:slug" element={<PageTransition><BlogDetail /></PageTransition>} />
+          <Route path="/leaderboard" element={<PageTransition><Leaderboard /></PageTransition>} />
         </Routes>
       </AnimatePresence>
     </>
