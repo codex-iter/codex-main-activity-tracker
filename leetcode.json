@@ -1,0 +1,933 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "FastAPI",
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/problems": {
+            "get": {
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Get All Problems",
+                "operationId": "get_all_problems_problems_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/problem/{id_or_slug}": {
+            "get": {
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Get Problem",
+                "operationId": "get_problem_problem__id_or_slug__get",
+                "parameters": [
+                    {
+                        "name": "id_or_slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Id Or Slug"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/problem/{id_or_slug}/signature/{lang_slug}": {
+            "get": {
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Get Problem Signature",
+                "operationId": "get_problem_signature_problem__id_or_slug__signature__lang_slug__get",
+                "parameters": [
+                    {
+                        "name": "id_or_slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Id Or Slug"
+                        }
+                    },
+                    {
+                        "name": "lang_slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Lang Slug"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/search": {
+            "get": {
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Search Problems",
+                "description": "Search for problems whose titles contain the given query (case-insensitive).",
+                "operationId": "search_problems_search_get",
+                "parameters": [
+                    {
+                        "name": "query",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Query"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/random": {
+            "get": {
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Get Random Problem",
+                "description": "Return a random problem. Optionally filter by difficulty and/or tag.",
+                "operationId": "get_random_problem_random_get",
+                "parameters": [
+                    {
+                        "name": "difficulty",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Filter by difficulty: Easy, Medium, Hard",
+                            "title": "Difficulty"
+                        },
+                        "description": "Filter by difficulty: Easy, Medium, Hard"
+                    },
+                    {
+                        "name": "tag",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Filter by topic tag slug (e.g., 'array', 'dynamic-programming')",
+                            "title": "Tag"
+                        },
+                        "description": "Filter by topic tag slug (e.g., 'array', 'dynamic-programming')"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/problems/filter": {
+            "get": {
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Filter Problems",
+                "description": "Filter problems by various criteria with pagination support.",
+                "operationId": "filter_problems_problems_filter_get",
+                "parameters": [
+                    {
+                        "name": "difficulty",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Filter by difficulty: Easy, Medium, Hard",
+                            "title": "Difficulty"
+                        },
+                        "description": "Filter by difficulty: Easy, Medium, Hard"
+                    },
+                    {
+                        "name": "paid_only",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Filter by paid status",
+                            "title": "Paid Only"
+                        },
+                        "description": "Filter by paid status"
+                    },
+                    {
+                        "name": "has_solution",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "boolean"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Filter by has official solution",
+                            "title": "Has Solution"
+                        },
+                        "description": "Filter by has official solution"
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 500,
+                            "minimum": 1,
+                            "description": "Number of results to return",
+                            "default": 50,
+                            "title": "Limit"
+                        },
+                        "description": "Number of results to return"
+                    },
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of results to skip (for pagination)",
+                            "default": 0,
+                            "title": "Skip"
+                        },
+                        "description": "Number of results to skip (for pagination)"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/stats": {
+            "get": {
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Get Problem Stats",
+                "description": "Get overall statistics about problems.",
+                "operationId": "get_problem_stats_stats_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/tags": {
+            "get": {
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Get All Tags",
+                "description": "Get all available topic tags with problem counts.\nServed from local cache.",
+                "operationId": "get_all_tags_tags_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/problems/tag/{tag_slug}": {
+            "get": {
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Get Problems By Tag",
+                "description": "Get problems filtered by a specific topic tag.",
+                "operationId": "get_problems_by_tag_problems_tag__tag_slug__get",
+                "parameters": [
+                    {
+                        "name": "tag_slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Tag Slug"
+                        }
+                    },
+                    {
+                        "name": "difficulty",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Filter by difficulty: Easy, Medium, Hard",
+                            "title": "Difficulty"
+                        },
+                        "description": "Filter by difficulty: Easy, Medium, Hard"
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 500,
+                            "minimum": 1,
+                            "description": "Number of results to return",
+                            "default": 50,
+                            "title": "Limit"
+                        },
+                        "description": "Number of results to return"
+                    },
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Number of results to skip",
+                            "default": 0,
+                            "title": "Skip"
+                        },
+                        "description": "Number of results to skip"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/problem/{id_or_slug}/similar": {
+            "get": {
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Get Similar Problems",
+                "description": "Get similar problems for a given problem.",
+                "operationId": "get_similar_problems_problem__id_or_slug__similar_get",
+                "parameters": [
+                    {
+                        "name": "id_or_slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Id Or Slug"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{username}": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get User Profile",
+                "operationId": "get_user_profile_user__username__get",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Username"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{username}/contests": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get User Contest History",
+                "operationId": "get_user_contest_history_user__username__contests_get",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Username"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{username}/submissions": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get Recent Submissions",
+                "operationId": "get_recent_submissions_user__username__submissions_get",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Username"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "default": 20,
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{username}/solved": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get User Solved",
+                "description": "Get all problems solved (Accepted) by a user.\n\nPass your LEETCODE_SESSION cookie value in the 'x_leetcode_session' query parameter\nto fetch the complete solved list. Without it, only the 20 most recent\naccepted submissions are returned (LeetCode's public API limit).",
+                "operationId": "get_user_solved_user__username__solved_get",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Username"
+                        }
+                    },
+                    {
+                        "name": "x_leetcode_session",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Your LEETCODE_SESSION cookie value. Get it from: DevTools → Application → Cookies → LEETCODE_SESSION. Without it, only ~20 recent solved problems are returned.",
+                            "title": "X Leetcode Session"
+                        },
+                        "description": "Your LEETCODE_SESSION cookie value. Get it from: DevTools → Application → Cookies → LEETCODE_SESSION. Without it, only ~20 recent solved problems are returned."
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/daily": {
+            "get": {
+                "tags": [
+                    "Daily Challenge"
+                ],
+                "summary": "Get Daily Challenge",
+                "operationId": "get_daily_challenge_daily_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "tags": [
+                    "Utility"
+                ],
+                "summary": "Health Check",
+                "operationId": "health_check_health_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{username}/calendar": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get User Calendar",
+                "operationId": "get_user_calendar_user__username__calendar_get",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Username"
+                        }
+                    },
+                    {
+                        "name": "year",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Year"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{username}/badges": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get User Badges",
+                "operationId": "get_user_badges_user__username__badges_get",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Username"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/{username}/skills": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get User Skills",
+                "operationId": "get_user_skills_user__username__skills_get",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Username"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/contests": {
+            "get": {
+                "tags": [
+                    "Contests"
+                ],
+                "summary": "Get Contests",
+                "operationId": "get_contests_contests_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        }
+    }
+}
