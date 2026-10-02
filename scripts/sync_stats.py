@@ -1,8 +1,15 @@
 """
-CODEX Activity Tracker - Automated Stats Sync Pipeline
-=======================================================
+CODEX Activity Tracker - Automated Stats Sync Pipeline (Async Edition)
+=======================================================================
 Runs twice daily via GitHub Actions to fetch platform metrics for all active
 CODEX members and upsert a daily snapshot into Supabase.
+
+Architecture:
+  - All HTTP I/O is done with aiohttp (async).
+  - Per-member: all 5 platforms are fetched concurrently with asyncio.gather().
+  - Cross-member: processed in chunks of CHUNK_SIZE with an inter-chunk sleep
+    to avoid rate-limiting from community APIs (LeetCode / CodeChef / GFG).
+  - Supabase reads/writes remain synchronous (supabase-py client).
 
 Environment Variables Required:
     SUPABASE_URL              - Supabase project URL
@@ -45,12 +52,12 @@ HackerRank GET /{handle}/badges      -> { badges: [...], data: { count } }
 HackerRank GET /{handle}/stats       -> { data: { topicAnalysis: [{topic, count}] } }
 """
 
+import asyncio
 import logging
 import os
-import time
 from datetime import datetime, timezone
 
-import requests
+import aiohttp
 from supabase import create_client, Client
 
 # ---------------------------------------------------------------------------
@@ -66,9 +73,10 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-REQUEST_TIMEOUT = 10          # seconds per external API call
-INTER_CALL_SLEEP = 1.5        # seconds between platform calls (rate-limit courtesy)
-GH_CONTRIBUTIONS_CAP = 500    # cap GitHub contributions to prevent padding exploit
+REQUEST_TIMEOUT   = 15           # seconds per external API call (aiohttp timeout)
+CHUNK_SIZE        = 10           # members processed concurrently per batch
+INTER_CHUNK_SLEEP = 3            # seconds to sleep between member chunks
+GH_CONTRIBUTIONS_CAP = 500       # cap GitHub contributions to prevent padding exploit
 
 # Standard browser User-Agent to bypass Cloudflare/bot-protection on community APIs
 BROWSER_HEADERS = {
@@ -96,18 +104,45 @@ def get_supabase_client() -> Client:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Async HTTP Helpers
 # ---------------------------------------------------------------------------
 
-def _get(url: str, **kwargs) -> dict:
+async def safe_fetch(
+    session: aiohttp.ClientSession,
+    url: str,
+    *,
+    method: str = "GET",
+    headers: dict | None = None,
+    json_body: dict | None = None,
+) -> dict:
     """
-    Thin wrapper around requests.get that always attaches BROWSER_HEADERS
-    and the standard timeout, then raises on non-2xx status.
+    Thin async wrapper around aiohttp requests.
+    - Always attaches BROWSER_HEADERS (merged with any extra headers).
+    - Applies REQUEST_TIMEOUT via aiohttp.ClientTimeout.
+    - Returns parsed JSON dict on success, empty dict on any error.
     """
-    headers = {**BROWSER_HEADERS, **kwargs.pop("headers", {})}
-    resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, **kwargs)
-    resp.raise_for_status()
-    return resp.json()
+    merged_headers = {**BROWSER_HEADERS, **(headers or {})}
+    timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
+    try:
+        if method.upper() == "POST":
+            async with session.post(
+                url, headers=merged_headers, json=json_body, timeout=timeout
+            ) as resp:
+                resp.raise_for_status()
+                return await resp.json(content_type=None)
+        else:
+            async with session.get(
+                url, headers=merged_headers, timeout=timeout
+            ) as resp:
+                resp.raise_for_status()
+                return await resp.json(content_type=None)
+    except asyncio.TimeoutError:
+        log.warning("    TIMEOUT fetching %s", url)
+    except aiohttp.ClientResponseError as exc:
+        log.warning("    HTTP %s fetching %s — %s", exc.status, url, exc.message)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("    ERROR fetching %s — %s", url, exc)
+    return {}
 
 
 def _safe_int(value, default: int = 0) -> int:
@@ -126,12 +161,12 @@ def _safe_float(value, default: float = 0.0) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Platform Data Fetchers
+# Async Platform Data Fetchers
 # ---------------------------------------------------------------------------
 
 # ── GitHub ─────────────────────────────────────────────────────────────────
 
-def fetch_github(handle: str) -> dict:
+async def fetch_github(session: aiohttp.ClientSession, handle: str) -> dict:
     """
     Fetch GitHub contributions (current year) and public repo count via GraphQL.
 
@@ -152,18 +187,16 @@ def fetch_github(handle: str) -> dict:
       }
     }
     """
-    resp = requests.post(
+    data = await safe_fetch(
+        session,
         "https://api.github.com/graphql",
-        json={"query": query, "variables": {"login": handle}},
+        method="POST",
         headers={
-            **BROWSER_HEADERS,
             "Authorization": f"bearer {token}",
             "Content-Type": "application/json",
         },
-        timeout=REQUEST_TIMEOUT,
+        json_body={"query": query, "variables": {"login": handle}},
     )
-    resp.raise_for_status()
-    data = resp.json()
     user = data.get("data", {}).get("user") or {}
     contributions = (
         user.get("contributionsCollection", {})
@@ -171,28 +204,35 @@ def fetch_github(handle: str) -> dict:
             .get("totalContributions", 0)
     )
     repos = user.get("repositories", {}).get("totalCount", 0)
-    return {
+    result = {
         "github_contributions": _safe_int(contributions),
         "github_repos": _safe_int(repos),
     }
+    log.info("    ✓ GitHub       -> %s", result)
+    return result
 
 
 # ── Codeforces ─────────────────────────────────────────────────────────────
 
-def fetch_codeforces(handle: str) -> dict:
+async def fetch_codeforces(session: aiohttp.ClientSession, handle: str) -> dict:
     """
-    Fetches Codeforces metrics across three endpoints:
+    Fetches Codeforces metrics across three endpoints concurrently:
       1. user.info  -> current rating, max rating, rank title
       2. user.status -> count of distinct AC'd problems
       3. user.rating -> number of rated contests attended
 
     Returns: {
       codeforces_rating, codeforces_max_rating, codeforces_rank_title,
-      codeforces_solved, contests_attended (CF portion)
+      codeforces_solved, cf_contests_attended
     }
     """
+    info_data, status_data, rating_data = await asyncio.gather(
+        safe_fetch(session, f"https://codeforces.com/api/user.info?handles={handle}"),
+        safe_fetch(session, f"https://codeforces.com/api/user.status?handle={handle}"),
+        safe_fetch(session, f"https://codeforces.com/api/user.rating?handle={handle}"),
+    )
+
     # 1. Profile info
-    info_data = _get(f"https://codeforces.com/api/user.info?handles={handle}")
     rating, max_rating, rank_title = 0, 0, "Unrated"
     if info_data.get("status") == "OK" and info_data.get("result"):
         r = info_data["result"][0]
@@ -200,10 +240,7 @@ def fetch_codeforces(handle: str) -> dict:
         max_rating = _safe_int(r.get("maxRating"))
         rank_title = r.get("rank") or "Unrated"
 
-    time.sleep(INTER_CALL_SLEEP)
-
     # 2. Distinct solved problems
-    status_data = _get(f"https://codeforces.com/api/user.status?handle={handle}")
     solved: set = set()
     if status_data.get("status") == "OK":
         for sub in status_data.get("result", []):
@@ -211,55 +248,53 @@ def fetch_codeforces(handle: str) -> dict:
                 prob = sub.get("problem", {})
                 solved.add((prob.get("contestId"), prob.get("index")))
 
-    time.sleep(INTER_CALL_SLEEP)
-
     # 3. Contest history -> count attended
-    rating_data = _get(f"https://codeforces.com/api/user.rating?handle={handle}")
     cf_contests = 0
     if rating_data.get("status") == "OK":
         cf_contests = len(rating_data.get("result", []))
 
-    return {
+    result = {
         "codeforces_rating": rating,
         "codeforces_max_rating": max_rating,
         "codeforces_rank_title": rank_title,
         "codeforces_solved": len(solved),
         "cf_contests_attended": cf_contests,
     }
+    log.info("    ✓ Codeforces   -> %s", result)
+    return result
 
 
 # ── LeetCode ───────────────────────────────────────────────────────────────
 
-def fetch_leetcode(handle: str) -> dict:
+async def fetch_leetcode(session: aiohttp.ClientSession, handle: str) -> dict:
     """
-    Fetches LeetCode metrics across two endpoints:
+    Fetches LeetCode metrics across three endpoints concurrently:
       1. GET /{handle}/solved  -> { total_solved }
-         (real key is `total_solved` in snake_case, NOT `totalSolved`)
       2. GET /{handle}         -> { submitStats.acSubmissionNum[{difficulty, count}] }
-         Used for per-difficulty breakdown (easy / medium / hard).
       3. GET /{handle}/contests -> {
              userContestRanking: { attendedContestsCount, rating, badge.name },
              userContestRankingHistory: [{ rating }]
            }
-         Used for contest count and max rating (peak over history).
 
     Returns: {
       leetcode_easy, leetcode_medium, leetcode_hard, leetcode_total,
-      leetcode_max_rating, lc_contests_attended, lc_badge_name
+      leetcode_max_rating, lc_contests_attended, lc_badge_name, _lc_summary
     }
     """
     BASE = "https://leetcode-api-pied.vercel.app"
 
+    solved_data, summary, contest_data = await asyncio.gather(
+        safe_fetch(session, f"{BASE}/user/{handle}/solved"),
+        safe_fetch(session, f"{BASE}/user/{handle}"),
+        safe_fetch(session, f"{BASE}/user/{handle}/contests"),
+    )
+
     # 1. Total solved
-    solved_data = _get(f"{BASE}/user/{handle}/solved")
     total = _safe_int(solved_data.get("total_solved"))
 
-    time.sleep(INTER_CALL_SLEEP)
-
-    # 2. Per-difficulty breakdown from summary endpoint
+    # 2. Per-difficulty breakdown
     easy = medium = hard = 0
     try:
-        summary = _get(f"{BASE}/user/{handle}")
         ac_list = (
             summary.get("submitStats", {})
                    .get("acSubmissionNum", [])
@@ -278,20 +313,16 @@ def fetch_leetcode(handle: str) -> dict:
     except Exception as exc:
         log.warning("    LeetCode difficulty breakdown unavailable for %s: %s", handle, exc)
 
-    time.sleep(INTER_CALL_SLEEP)
-
     # 3. Contest history
     lc_contests = 0
     lc_max_rating = 0
     lc_badge = ""
     try:
-        contest_data = _get(f"{BASE}/user/{handle}/contests")
         ranking = contest_data.get("userContestRanking") or {}
         lc_contests = _safe_int(ranking.get("attendedContestsCount"))
         current_rating = _safe_float(ranking.get("rating"))
         lc_badge = (ranking.get("badge") or {}).get("name") or ""
 
-        # Peak rating = max across full history
         history = contest_data.get("userContestRankingHistory") or []
         history_ratings = [
             _safe_float(entry.get("rating"))
@@ -302,7 +333,7 @@ def fetch_leetcode(handle: str) -> dict:
     except Exception as exc:
         log.warning("    LeetCode contests unavailable for %s: %s", handle, exc)
 
-    return {
+    result = {
         "leetcode_easy": easy,
         "leetcode_medium": medium,
         "leetcode_hard": hard,
@@ -310,14 +341,18 @@ def fetch_leetcode(handle: str) -> dict:
         "leetcode_max_rating": lc_max_rating,
         "lc_contests_attended": lc_contests,
         "lc_badge_name": lc_badge,
+        "_lc_summary": summary,   # kept for topic aggregation in build_topic_stats
     }
+    log.info("    ✓ LeetCode     -> easy=%d med=%d hard=%d total=%d contests=%d",
+             easy, medium, hard, total, lc_contests)
+    return result
 
 
 # ── CodeChef ───────────────────────────────────────────────────────────────
 
-def fetch_codechef(handle: str) -> dict:
+async def fetch_codechef(session: aiohttp.ClientSession, handle: str) -> dict:
     """
-    Fetches CodeChef metrics across three endpoints. All data is inside `data: {}`.
+    Fetches CodeChef metrics across four endpoints concurrently. All data inside `data: {}`.
 
     1. GET /{handle}          -> data.{ currentRating, maxRating, totalSolved, totalActiveDays }
     2. GET /{handle}/heatmap  -> data.{ totalSubmissions, currentStreak, longestStreak }
@@ -332,17 +367,22 @@ def fetch_codechef(handle: str) -> dict:
     """
     BASE = f"https://codechef-stats.tashif.codes/{handle}"
 
+    profile_resp, heatmap_resp, contests_resp, stats_resp = await asyncio.gather(
+        safe_fetch(session, BASE),
+        safe_fetch(session, f"{BASE}/heatmap"),
+        safe_fetch(session, f"{BASE}/contests"),
+        safe_fetch(session, f"{BASE}/stats"),
+    )
+
     # 1. Profile summary
-    profile = (_get(BASE).get("data") or {})
+    profile = profile_resp.get("data") or {}
     cc_rating = _safe_int(profile.get("currentRating"))
     cc_max_rating = _safe_int(profile.get("maxRating"))
     cc_solved = _safe_int(profile.get("totalSolved"))
     cc_active_days = _safe_int(profile.get("totalActiveDays"))
 
-    time.sleep(INTER_CALL_SLEEP)
-
     # 2. Heatmap -> streak & submission counts
-    heatmap = (_get(f"{BASE}/heatmap").get("data") or {})
+    heatmap = heatmap_resp.get("data") or {}
     cc_total_subs = _safe_int(heatmap.get("totalSubmissions"))
     cc_current_streak = _safe_int(heatmap.get("currentStreak"))
     cc_max_streak = _safe_int(heatmap.get("longestStreak"))
@@ -350,26 +390,22 @@ def fetch_codechef(handle: str) -> dict:
     if heatmap.get("totalActiveDays"):
         cc_active_days = _safe_int(heatmap.get("totalActiveDays"))
 
-    time.sleep(INTER_CALL_SLEEP)
-
     # 3. Contests attended
-    contests_data = (_get(f"{BASE}/contests").get("data") or {})
+    contests_data = contests_resp.get("data") or {}
     cc_contests = _safe_int(contests_data.get("count"))
     # If the contests endpoint has a better maxRating, prefer it
     if contests_data.get("maxRating"):
         cc_max_rating = _safe_int(contests_data.get("maxRating"))
 
-    time.sleep(INTER_CALL_SLEEP)
-
     # 4. Topic analysis
-    stats_data = (_get(f"{BASE}/stats").get("data") or {})
+    stats_data = stats_resp.get("data") or {}
     cc_topics = {
         item["topic"]: item["count"]
         for item in stats_data.get("topicAnalysis", [])
         if item.get("topic")
     }
 
-    return {
+    result = {
         "codechef_rating": cc_rating,
         "codechef_max_rating": cc_max_rating,
         "codechef_solved": cc_solved,
@@ -380,13 +416,16 @@ def fetch_codechef(handle: str) -> dict:
         "cc_contests_attended": cc_contests,
         "cc_topics": cc_topics,
     }
+    log.info("    ✓ CodeChef     -> rating=%d solved=%d streak=%d",
+             cc_rating, cc_solved, cc_current_streak)
+    return result
 
 
 # ── GeeksforGeeks ──────────────────────────────────────────────────────────
 
-def fetch_gfg(handle: str) -> dict:
+async def fetch_gfg(session: aiohttp.ClientSession, handle: str) -> dict:
     """
-    Fetches GFG metrics across three endpoints. All data is inside `data: {}`.
+    Fetches GFG metrics across four endpoints concurrently. All data inside `data: {}`.
 
     1. GET /{handle}          -> data.totalSolved  (top-level totalProblemsSolved as fallback)
     2. GET /{handle}/heatmap  -> data.{ totalSubmissions, currentStreak, longestStreak, totalActiveDays }
@@ -408,49 +447,49 @@ def fetch_gfg(handle: str) -> dict:
     """
     BASE = f"https://gfg-stats.tashif.codes/{handle}"
 
+    summary_payload, heatmap_resp, stats_resp, rating_resp = await asyncio.gather(
+        safe_fetch(session, BASE),
+        safe_fetch(session, f"{BASE}/heatmap"),
+        safe_fetch(session, f"{BASE}/stats"),
+        safe_fetch(session, f"{BASE}/rating"),
+    )
+
     # 1. Summary
-    summary_payload = _get(BASE)
     summary_data = summary_payload.get("data") or {}
     solved = _safe_int(
         summary_data.get("totalSolved")
         or summary_payload.get("totalProblemsSolved")
     )
 
-    time.sleep(INTER_CALL_SLEEP)
-
     # 2. Heatmap -> streak & submission counts
-    heatmap = (_get(f"{BASE}/heatmap").get("data") or {})
+    heatmap = heatmap_resp.get("data") or {}
     gfg_total_subs = _safe_int(heatmap.get("totalSubmissions"))
     gfg_current_streak = _safe_int(heatmap.get("currentStreak"))
     gfg_max_streak = _safe_int(heatmap.get("longestStreak"))
     gfg_active_days = _safe_int(heatmap.get("totalActiveDays"))
 
-    time.sleep(INTER_CALL_SLEEP)
-
     # 3. Difficulty breakdown + topics
-    stats_data = (_get(f"{BASE}/stats").get("data") or {})
+    stats_data = stats_resp.get("data") or {}
     by_diff = stats_data.get("byDifficulty") or {}
     gfg_school = _safe_int(by_diff.get("school"))
-    gfg_basic = _safe_int(by_diff.get("basic"))
-    gfg_easy = _safe_int(by_diff.get("easy"))
+    gfg_basic  = _safe_int(by_diff.get("basic"))
+    gfg_easy   = _safe_int(by_diff.get("easy"))
     gfg_medium = _safe_int(by_diff.get("medium"))
-    gfg_hard = _safe_int(by_diff.get("hard"))
+    gfg_hard   = _safe_int(by_diff.get("hard"))
     gfg_topics = {
         item["topic"]: item["count"]
         for item in stats_data.get("topicAnalysis", [])
         if item.get("topic")
     }
 
-    time.sleep(INTER_CALL_SLEEP)
-
     # 4. Rating (may be null for non-contest users)
-    rating_data = (_get(f"{BASE}/rating").get("data") or {})
-    gfg_max_rating = _safe_int(rating_data.get("max"))
+    rating_data = rating_resp.get("data") or {}
+    _gfg_max_rating = _safe_int(rating_data.get("max"))  # stored for reference; not a snapshot column
 
     # Use totalSolved as score (no dedicated score field exists in this API)
     score = solved
 
-    return {
+    result = {
         "gfg_solved": solved,
         "gfg_score": score,
         "gfg_school": gfg_school,
@@ -462,16 +501,19 @@ def fetch_gfg(handle: str) -> dict:
         "gfg_total_submissions": gfg_total_subs,
         "gfg_current_streak": gfg_current_streak,
         "gfg_max_streak": gfg_max_streak,
-        "gfg_max_rating": gfg_max_rating,
+        "gfg_max_rating": _gfg_max_rating,
         "gfg_topics": gfg_topics,
     }
+    log.info("    ✓ GFG          -> solved=%d streak=%d [S=%d B=%d E=%d M=%d H=%d]",
+             solved, gfg_current_streak, gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard)
+    return result
 
 
 # ── HackerRank ─────────────────────────────────────────────────────────────
 
-def fetch_hackerrank(handle: str) -> dict:
+async def fetch_hackerrank(session: aiohttp.ClientSession, handle: str) -> dict:
     """
-    Fetches HackerRank metrics across two endpoints.
+    Fetches HackerRank metrics across two endpoints concurrently.
 
     1. GET /{handle}/badges  -> { badges: [...], data: { count, list: [{id,name}] } }
        badge count = data.count, badge list = data.list
@@ -483,8 +525,12 @@ def fetch_hackerrank(handle: str) -> dict:
     """
     BASE = f"https://hackerrank-stats.tashif.codes/{handle}"
 
+    badges_payload, stats_resp = await asyncio.gather(
+        safe_fetch(session, f"{BASE}/badges"),
+        safe_fetch(session, f"{BASE}/stats"),
+    )
+
     # 1. Badges
-    badges_payload = _get(f"{BASE}/badges")
     badges_data = badges_payload.get("data") or {}
     hr_badge_count = _safe_int(
         badges_data.get("count")
@@ -496,12 +542,10 @@ def fetch_hackerrank(handle: str) -> dict:
         for b in (badges_data.get("list") or badges_payload.get("badges") or [])
     ]
 
-    time.sleep(INTER_CALL_SLEEP)
-
     # 2. Topic analysis from stats
     hr_topics = {}
     try:
-        stats_data = (_get(f"{BASE}/stats").get("data") or {})
+        stats_data = stats_resp.get("data") or {}
         hr_topics = {
             item["topic"]: item["count"]
             for item in stats_data.get("topicAnalysis", [])
@@ -510,11 +554,13 @@ def fetch_hackerrank(handle: str) -> dict:
     except Exception as exc:
         log.warning("    HackerRank topics unavailable for %s: %s", handle, exc)
 
-    return {
+    result = {
         "hackerrank_badges": hr_badge_count,
         "hr_badges_list": hr_badges_list,
         "hr_topics": hr_topics,
     }
+    log.info("    ✓ HackerRank   -> badges=%d", hr_badge_count)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -597,61 +643,29 @@ def calculate_score(snapshot: dict) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Platform Fetch Dispatcher
+# Async Per-Member Sync
 # ---------------------------------------------------------------------------
 
-def safe_fetch(fetcher, handle: str, platform: str, defaults: dict) -> dict:
+async def sync_member_async(
+    session: aiohttp.ClientSession,
+    member: dict,
+    today: str,
+) -> dict:
     """
-    Safely calls a platform fetcher. On any exception, logs a warning with the
-    full error message and returns the provided default values to keep the sync
-    loop running without aborting the entire member sync.
-    """
-    try:
-        result = fetcher(handle)
-        log.info("    ✓ %-12s -> %s", platform, result)
-        return result
-    except requests.exceptions.Timeout:
-        log.warning(
-            "    ✗ %-12s -> Timed out after %ds (handle=%s). Using defaults.",
-            platform, REQUEST_TIMEOUT, handle,
-        )
-    except requests.exceptions.HTTPError as exc:
-        status = exc.response.status_code if exc.response is not None else "?"
-        body = ""
-        try:
-            body = exc.response.text[:200]
-        except Exception:  # noqa: BLE001
-            pass
-        log.warning(
-            "    ✗ %-12s -> HTTP %s (handle=%s). Body: %s. Using defaults.",
-            platform, status, handle, body,
-        )
-    except Exception as exc:  # noqa: BLE001
-        log.warning(
-            "    ✗ %-12s -> Unexpected error (handle=%s): %s. Using defaults.",
-            platform, handle, exc,
-        )
-    return defaults
-
-
-# ---------------------------------------------------------------------------
-# Main Sync Logic
-# ---------------------------------------------------------------------------
-
-def sync_member(member: dict, today: str) -> dict:
-    """
-    Fetch all platform metrics for a single member and build the full snapshot dict.
+    Fetch all platform metrics for a single member concurrently using asyncio.gather().
+    All 5 platform fetches fire at the same time; we wait for all to complete before
+    assembling the snapshot dict.
     """
     member_id = member["id"]
     name = member.get("full_name", "Unknown")
-    log.info("  Syncing member: %s (%s)", name, member_id)
+    log.info("  → Syncing: %s (%s)", name, member_id)
 
     # ── Defaults for every snapshot column ──────────────────────────────────
     snapshot: dict = {
         "member_id": member_id,
         "snapshot_date": today,
 
-        # Basic platform metrics (existing columns)
+        # Basic platform metrics
         "github_contributions": 0,
         "github_repos": 0,
         "codeforces_rating": 0,
@@ -667,173 +681,173 @@ def sync_member(member: dict, today: str) -> dict:
         "hackerrank_badges": 0,
         "total_score": 0.0,
 
-        # ── NEW: Consistency & Streaks ─────────────────────────────────────
+        # Consistency & Streaks
         "active_days": 0,
         "current_streak": 0,
         "max_streak": 0,
         "total_submissions": 0,
 
-        # ── NEW: Contest Metrics & Peak Ratings ───────────────────────────
+        # Contest Metrics & Peak Ratings
         "contests_attended": 0,
         "leetcode_max_rating": 0,
         "codechef_max_rating": 0,
         "codeforces_max_rating": 0,
         "codeforces_rank_title": "Unrated",
 
-        # ── NEW: GFG Difficulty Breakdown ─────────────────────────────────
+        # GFG Difficulty Breakdown
         "gfg_school": 0,
         "gfg_basic": 0,
         "gfg_easy": 0,
         "gfg_medium": 0,
         "gfg_hard": 0,
 
-        # ── NEW: Deep Analytics (JSONB) ───────────────────────────────────
+        # Deep Analytics (JSONB)
         "topic_stats": {},
         "badges_detail": [],
     }
 
-    # Intermediate fields (not written directly to Supabase — used for aggregation)
-    _lc_badge_name = ""
+    # Prepare coroutine list — only for handles that actually exist on the member row
+    gh_handle  = member.get("github_handle")
+    cf_handle  = member.get("codeforces_handle")
+    lc_handle  = member.get("leetcode_handle")
+    cc_handle  = member.get("codechef_handle")
+    gfg_handle = member.get("gfg_handle")
+    hr_handle  = member.get("hackerrank_handle")
+
+    # Build coroutines; use None sentinel for skipped platforms
+    async def _noop() -> dict:
+        return {}
+
+    gh_coro  = fetch_github(session, gh_handle)    if gh_handle  else _noop()
+    cf_coro  = fetch_codeforces(session, cf_handle) if cf_handle  else _noop()
+    lc_coro  = fetch_leetcode(session, lc_handle)  if lc_handle  else _noop()
+    cc_coro  = fetch_codechef(session, cc_handle)  if cc_handle  else _noop()
+    gfg_coro = fetch_gfg(session, gfg_handle)      if gfg_handle else _noop()
+    hr_coro  = fetch_hackerrank(session, hr_handle) if hr_handle  else _noop()
+
+    # ── Fire all platform requests concurrently ──────────────────────────────
+    gh_data, cf_data, lc_data, cc_data, gfg_data, hr_data = await asyncio.gather(
+        gh_coro, cf_coro, lc_coro, cc_coro, gfg_coro, hr_coro,
+        return_exceptions=False,
+    )
+
+    # Intermediate aggregation helpers
+    _lc_badge_name  = ""
     _hr_badges_list: list = []
     _cc_topics: dict = {}
     _gfg_topics: dict = {}
     _hr_topics: dict = {}
-    _lc_summary: dict = {}   # cached for topic extraction
+    _lc_summary: dict = {}
     _cf_contests = 0
     _lc_contests = 0
     _cc_contests = 0
 
     # ── GitHub ──────────────────────────────────────────────────────────────
-    if handle := member.get("github_handle"):
-        defaults = {"github_contributions": 0, "github_repos": 0}
-        data = safe_fetch(fetch_github, handle, "GitHub", defaults)
-        snapshot.update(data)
-        time.sleep(INTER_CALL_SLEEP)
+    if gh_handle and gh_data:
+        snapshot.update({
+            "github_contributions": gh_data.get("github_contributions", 0),
+            "github_repos": gh_data.get("github_repos", 0),
+        })
 
     # ── Codeforces ──────────────────────────────────────────────────────────
-    if handle := member.get("codeforces_handle"):
-        defaults = {
-            "codeforces_rating": 0, "codeforces_max_rating": 0,
-            "codeforces_rank_title": "Unrated", "codeforces_solved": 0,
-            "cf_contests_attended": 0,
-        }
-        data = safe_fetch(fetch_codeforces, handle, "Codeforces", defaults)
-        snapshot["codeforces_rating"] = data.get("codeforces_rating", 0)
-        snapshot["codeforces_max_rating"] = data.get("codeforces_max_rating", 0)
-        snapshot["codeforces_rank_title"] = data.get("codeforces_rank_title", "Unrated")
-        snapshot["codeforces_solved"] = data.get("codeforces_solved", 0)
-        _cf_contests = data.get("cf_contests_attended", 0)
-        time.sleep(INTER_CALL_SLEEP)
+    if cf_handle and cf_data:
+        snapshot["codeforces_rating"]     = cf_data.get("codeforces_rating", 0)
+        snapshot["codeforces_max_rating"] = cf_data.get("codeforces_max_rating", 0)
+        snapshot["codeforces_rank_title"] = cf_data.get("codeforces_rank_title", "Unrated")
+        snapshot["codeforces_solved"]     = cf_data.get("codeforces_solved", 0)
+        _cf_contests                      = cf_data.get("cf_contests_attended", 0)
 
     # ── LeetCode ────────────────────────────────────────────────────────────
-    if handle := member.get("leetcode_handle"):
-        defaults = {
-            "leetcode_easy": 0, "leetcode_medium": 0,
-            "leetcode_hard": 0, "leetcode_total": 0,
-            "leetcode_max_rating": 0, "lc_contests_attended": 0,
-            "lc_badge_name": "",
-        }
-        data = safe_fetch(fetch_leetcode, handle, "LeetCode", defaults)
-        snapshot["leetcode_easy"] = data.get("leetcode_easy", 0)
-        snapshot["leetcode_medium"] = data.get("leetcode_medium", 0)
-        snapshot["leetcode_hard"] = data.get("leetcode_hard", 0)
-        snapshot["leetcode_total"] = data.get("leetcode_total", 0)
-        snapshot["leetcode_max_rating"] = data.get("leetcode_max_rating", 0)
-        _lc_contests = data.get("lc_contests_attended", 0)
-        _lc_badge_name = data.get("lc_badge_name", "")
-        time.sleep(INTER_CALL_SLEEP)
+    if lc_handle and lc_data:
+        snapshot["leetcode_easy"]        = lc_data.get("leetcode_easy", 0)
+        snapshot["leetcode_medium"]      = lc_data.get("leetcode_medium", 0)
+        snapshot["leetcode_hard"]        = lc_data.get("leetcode_hard", 0)
+        snapshot["leetcode_total"]       = lc_data.get("leetcode_total", 0)
+        snapshot["leetcode_max_rating"]  = lc_data.get("leetcode_max_rating", 0)
+        _lc_contests                     = lc_data.get("lc_contests_attended", 0)
+        _lc_badge_name                   = lc_data.get("lc_badge_name", "")
+        _lc_summary                      = lc_data.get("_lc_summary", {})
 
     # ── CodeChef ────────────────────────────────────────────────────────────
-    if handle := member.get("codechef_handle"):
-        defaults = {
-            "codechef_rating": 0, "codechef_max_rating": 0, "codechef_solved": 0,
-            "cc_active_days": 0, "cc_total_submissions": 0,
-            "cc_current_streak": 0, "cc_max_streak": 0,
-            "cc_contests_attended": 0, "cc_topics": {},
-        }
-        data = safe_fetch(fetch_codechef, handle, "CodeChef", defaults)
-        snapshot["codechef_rating"] = data.get("codechef_rating", 0)
-        snapshot["codechef_max_rating"] = data.get("codechef_max_rating", 0)
-        snapshot["codechef_solved"] = data.get("codechef_solved", 0)
-        _cc_topics = data.get("cc_topics", {})
-        _cc_contests = data.get("cc_contests_attended", 0)
+    if cc_handle and cc_data:
+        snapshot["codechef_rating"]     = cc_data.get("codechef_rating", 0)
+        snapshot["codechef_max_rating"] = cc_data.get("codechef_max_rating", 0)
+        snapshot["codechef_solved"]     = cc_data.get("codechef_solved", 0)
+        _cc_topics                      = cc_data.get("cc_topics", {})
+        _cc_contests                    = cc_data.get("cc_contests_attended", 0)
         # Accumulate streak & active days into cross-platform fields
-        snapshot["active_days"] += data.get("cc_active_days", 0)
-        snapshot["total_submissions"] += data.get("cc_total_submissions", 0)
-        # Use the platform with the biggest streak as the reported streak
-        if data.get("cc_current_streak", 0) > snapshot["current_streak"]:
-            snapshot["current_streak"] = data.get("cc_current_streak", 0)
-        if data.get("cc_max_streak", 0) > snapshot["max_streak"]:
-            snapshot["max_streak"] = data.get("cc_max_streak", 0)
-        time.sleep(INTER_CALL_SLEEP)
+        snapshot["active_days"]        += cc_data.get("cc_active_days", 0)
+        snapshot["total_submissions"]  += cc_data.get("cc_total_submissions", 0)
+        if cc_data.get("cc_current_streak", 0) > snapshot["current_streak"]:
+            snapshot["current_streak"] = cc_data.get("cc_current_streak", 0)
+        if cc_data.get("cc_max_streak", 0) > snapshot["max_streak"]:
+            snapshot["max_streak"] = cc_data.get("cc_max_streak", 0)
 
     # ── GeeksforGeeks ───────────────────────────────────────────────────────
-    if handle := member.get("gfg_handle"):
-        defaults = {
-            "gfg_solved": 0, "gfg_score": 0,
-            "gfg_school": 0, "gfg_basic": 0, "gfg_easy": 0,
-            "gfg_medium": 0, "gfg_hard": 0,
-            "gfg_active_days": 0, "gfg_total_submissions": 0,
-            "gfg_current_streak": 0, "gfg_max_streak": 0,
-            "gfg_max_rating": 0, "gfg_topics": {},
-        }
-        data = safe_fetch(fetch_gfg, handle, "GFG", defaults)
-        snapshot["gfg_solved"] = data.get("gfg_solved", 0)
-        snapshot["gfg_score"] = data.get("gfg_score", 0)
-        snapshot["gfg_school"] = data.get("gfg_school", 0)
-        snapshot["gfg_basic"] = data.get("gfg_basic", 0)
-        snapshot["gfg_easy"] = data.get("gfg_easy", 0)
-        snapshot["gfg_medium"] = data.get("gfg_medium", 0)
-        snapshot["gfg_hard"] = data.get("gfg_hard", 0)
-        _gfg_topics = data.get("gfg_topics", {})
-        snapshot["active_days"] += data.get("gfg_active_days", 0)
-        snapshot["total_submissions"] += data.get("gfg_total_submissions", 0)
-        if data.get("gfg_current_streak", 0) > snapshot["current_streak"]:
-            snapshot["current_streak"] = data.get("gfg_current_streak", 0)
-        if data.get("gfg_max_streak", 0) > snapshot["max_streak"]:
-            snapshot["max_streak"] = data.get("gfg_max_streak", 0)
-        time.sleep(INTER_CALL_SLEEP)
+    if gfg_handle and gfg_data:
+        snapshot["gfg_solved"]   = gfg_data.get("gfg_solved", 0)
+        snapshot["gfg_score"]    = gfg_data.get("gfg_score", 0)
+        snapshot["gfg_school"]   = gfg_data.get("gfg_school", 0)
+        snapshot["gfg_basic"]    = gfg_data.get("gfg_basic", 0)
+        snapshot["gfg_easy"]     = gfg_data.get("gfg_easy", 0)
+        snapshot["gfg_medium"]   = gfg_data.get("gfg_medium", 0)
+        snapshot["gfg_hard"]     = gfg_data.get("gfg_hard", 0)
+        _gfg_topics              = gfg_data.get("gfg_topics", {})
+        snapshot["active_days"]       += gfg_data.get("gfg_active_days", 0)
+        snapshot["total_submissions"] += gfg_data.get("gfg_total_submissions", 0)
+        if gfg_data.get("gfg_current_streak", 0) > snapshot["current_streak"]:
+            snapshot["current_streak"] = gfg_data.get("gfg_current_streak", 0)
+        if gfg_data.get("gfg_max_streak", 0) > snapshot["max_streak"]:
+            snapshot["max_streak"] = gfg_data.get("gfg_max_streak", 0)
 
     # ── HackerRank ──────────────────────────────────────────────────────────
-    if handle := member.get("hackerrank_handle"):
-        defaults = {"hackerrank_badges": 0, "hr_badges_list": [], "hr_topics": {}}
-        data = safe_fetch(fetch_hackerrank, handle, "HackerRank", defaults)
-        snapshot["hackerrank_badges"] = data.get("hackerrank_badges", 0)
-        _hr_badges_list = data.get("hr_badges_list", [])
-        _hr_topics = data.get("hr_topics", {})
-        time.sleep(INTER_CALL_SLEEP)
+    if hr_handle and hr_data:
+        snapshot["hackerrank_badges"] = hr_data.get("hackerrank_badges", 0)
+        _hr_badges_list               = hr_data.get("hr_badges_list", [])
+        _hr_topics                    = hr_data.get("hr_topics", {})
 
-    # ── Cross-platform Aggregation ──────────────────────────────────────────
-    # Total contests attended = sum of all platforms
+    # ── Cross-platform Aggregation ───────────────────────────────────────────
     snapshot["contests_attended"] = _cf_contests + _lc_contests + _cc_contests
 
-    # JSONB: topic_stats (keyed by platform)
     snapshot["topic_stats"] = build_topic_stats(
         _lc_summary, _cc_topics, _gfg_topics, _hr_topics
     )
-
-    # JSONB: badges_detail (unified list)
     snapshot["badges_detail"] = build_badges_detail(_lc_badge_name, _hr_badges_list)
 
-    # ── Compute Score ───────────────────────────────────────────────────────
+    # ── Compute Score ────────────────────────────────────────────────────────
     snapshot["total_score"] = calculate_score(snapshot)
-    log.info("  → Total Score: %.2f | Contests: %d | Streak: %d",
-             snapshot["total_score"], snapshot["contests_attended"], snapshot["current_streak"])
+    log.info(
+        "  ✓ %s — Score: %.2f | Contests: %d | Streak: %d",
+        name, snapshot["total_score"], snapshot["contests_attended"], snapshot["current_streak"],
+    )
 
     return snapshot
 
 
-def main():
+# ---------------------------------------------------------------------------
+# Async Main Orchestrator
+# ---------------------------------------------------------------------------
+
+async def run_sync() -> None:
+    """
+    Main async orchestrator:
+      1. Fetches all active members from Supabase (synchronous).
+      2. Splits members into chunks of CHUNK_SIZE.
+      3. For each chunk: fires all member syncs concurrently, then sleeps INTER_CHUNK_SLEEP.
+      4. Upserts each completed snapshot to Supabase (synchronous).
+    """
     log.info("=" * 60)
     log.info("CODEX Stats Sync Pipeline — %s UTC",
              datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))
+    log.info("Async mode: CHUNK_SIZE=%d, INTER_CHUNK_SLEEP=%ds, TIMEOUT=%ds",
+             CHUNK_SIZE, INTER_CHUNK_SLEEP, REQUEST_TIMEOUT)
     log.info("=" * 60)
 
-    supabase = get_supabase_client()
+    supabase_client = get_supabase_client()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     log.info("Fetching active members from Supabase...")
-    response = supabase.table("members").select("*").eq("is_active", True).execute()
+    response = supabase_client.table("members").select("*").eq("is_active", True).execute()
     members = response.data or []
     log.info("Found %d active member(s).", len(members))
 
@@ -841,33 +855,56 @@ def main():
         log.warning("No active members found. Exiting.")
         return
 
+    # Split into chunks
+    chunks = [members[i : i + CHUNK_SIZE] for i in range(0, len(members), CHUNK_SIZE)]
+    total_chunks = len(chunks)
+
     success_count = 0
     fail_count = 0
 
-    for member in members:
-        try:
-            snapshot = sync_member(member, today)
-
-            supabase.table("activity_snapshots").upsert(
-                snapshot,
-                on_conflict="member_id,snapshot_date",
-            ).execute()
-            log.info("  ✓ Upserted snapshot for %s\n", member.get("full_name", member["id"]))
-            success_count += 1
-
-        except Exception as exc:  # noqa: BLE001
-            log.error(
-                "  ✗ Failed to sync member %s: %s\n",
-                member.get("full_name", member.get("id")),
-                exc,
+    connector = aiohttp.TCPConnector(limit=50)   # max 50 simultaneous TCP connections
+    async with aiohttp.ClientSession(connector=connector) as session:
+        for chunk_idx, chunk in enumerate(chunks, start=1):
+            log.info(
+                "-" * 60
+                + f"\nChunk {chunk_idx}/{total_chunks} — processing {len(chunk)} member(s)..."
             )
-            fail_count += 1
-            continue
+
+            # Fire all members in this chunk concurrently
+            tasks = [sync_member_async(session, m, today) for m in chunk]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Upsert results synchronously (supabase-py is synchronous)
+            for member, result in zip(chunk, results):
+                name = member.get("full_name", member["id"])
+                if isinstance(result, Exception):
+                    log.error("  ✗ Failed to sync %s: %s", name, result)
+                    fail_count += 1
+                    continue
+                try:
+                    supabase_client.table("activity_snapshots").upsert(
+                        result,
+                        on_conflict="member_id,snapshot_date",
+                    ).execute()
+                    log.info("  ✓ Upserted snapshot for %s", name)
+                    success_count += 1
+                except Exception as exc:  # noqa: BLE001
+                    log.error("  ✗ Supabase upsert failed for %s: %s", name, exc)
+                    fail_count += 1
+
+            # Inter-chunk rate-limit courtesy sleep (skip after last chunk)
+            if chunk_idx < total_chunks:
+                log.info("  ⏳ Sleeping %ds before next chunk...", INTER_CHUNK_SLEEP)
+                await asyncio.sleep(INTER_CHUNK_SLEEP)
 
     log.info("=" * 60)
     log.info("Sync complete. Success: %d | Failed: %d", success_count, fail_count)
     log.info("=" * 60)
 
 
+# ---------------------------------------------------------------------------
+# Entry Point
+# ---------------------------------------------------------------------------
+
 if __name__ == "__main__":
-    main()
+    asyncio.run(run_sync())
