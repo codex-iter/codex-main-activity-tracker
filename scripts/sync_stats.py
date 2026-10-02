@@ -35,6 +35,16 @@ REQUEST_TIMEOUT = 10          # seconds per external API call
 INTER_CALL_SLEEP = 1.5        # seconds between platform calls (rate-limit courtesy)
 GH_CONTRIBUTIONS_CAP = 500    # cap GitHub contributions to prevent padding exploit
 
+# Standard browser User-Agent to bypass Cloudflare/bot-protection on community APIs
+BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json",
+}
+
 # ---------------------------------------------------------------------------
 # Supabase Client
 # ---------------------------------------------------------------------------
@@ -141,33 +151,95 @@ def fetch_codeforces(handle: str) -> dict:
 def fetch_leetcode(handle: str) -> dict:
     """
     Fetch LeetCode solved problem counts by difficulty.
+
+    Real response shape from /user/{handle}/solved:
+      { "username": "...", "total_solved": 250, "solved_slugs": [...], "solved": [...] }
+
+    The /solved endpoint only provides total_solved (not per-difficulty). The per-difficulty
+    breakdown (easySolved / mediumSolved / hardSolved) comes from the /user/{handle}/stats
+    endpoint, but that returns 404 for this API host. We therefore fetch the summary endpoint
+    GET /{handle} which contains submitStats.acSubmissionNum with difficulty-level data.
+
     Returns: { leetcode_easy, leetcode_medium, leetcode_hard, leetcode_total }
     """
-    resp = requests.get(
+    # Step 1: Get total_solved from the /solved endpoint
+    solved_resp = requests.get(
         f"https://leetcode-api-pied.vercel.app/user/{handle}/solved",
+        headers=BROWSER_HEADERS,
         timeout=REQUEST_TIMEOUT,
     )
-    resp.raise_for_status()
-    data = resp.json()
+    solved_resp.raise_for_status()
+    solved_data = solved_resp.json()
+    # Real key is `total_solved`, not `totalSolved`
+    total = int(solved_data.get("total_solved", 0) or 0)
+
+    time.sleep(INTER_CALL_SLEEP)
+
+    # Step 2: Get per-difficulty breakdown from the summary endpoint GET /{handle}
+    # Response contains submitStats.acSubmissionNum[{difficulty, count}]
+    easy, medium, hard = 0, 0, 0
+    try:
+        summary_resp = requests.get(
+            f"https://leetcode-api-pied.vercel.app/user/{handle}",
+            headers=BROWSER_HEADERS,
+            timeout=REQUEST_TIMEOUT,
+        )
+        summary_resp.raise_for_status()
+        summary_data = summary_resp.json()
+        ac_list = (
+            summary_data.get("submitStats", {})
+                        .get("acSubmissionNum", [])
+        )
+        for item in ac_list:
+            diff = (item.get("difficulty") or "").lower()
+            count = int(item.get("count", 0) or 0)
+            if diff == "easy":
+                easy = count
+            elif diff == "medium":
+                medium = count
+            elif diff == "hard":
+                hard = count
+        # If breakdown sums exceed total, trust the breakdown
+        if easy + medium + hard > total:
+            total = easy + medium + hard
+    except Exception as exc:
+        log.warning("    LeetCode difficulty breakdown unavailable for %s: %s", handle, exc)
+
     return {
-        "leetcode_easy": int(data.get("easySolved", 0) or 0),
-        "leetcode_medium": int(data.get("mediumSolved", 0) or 0),
-        "leetcode_hard": int(data.get("hardSolved", 0) or 0),
-        "leetcode_total": int(data.get("totalSolved", 0) or 0),
+        "leetcode_easy": easy,
+        "leetcode_medium": medium,
+        "leetcode_hard": hard,
+        "leetcode_total": total,
     }
 
 
 def fetch_codechef(handle: str) -> dict:
     """
     Fetch CodeChef current rating and total problems solved.
+
+    Real response shape:
+      {
+        "status": "success",
+        "data": {
+          "currentRating": 1800,
+          "totalSolved": 120,
+          ...
+        }
+      }
+    NOTE: All metrics are nested under the `data` key — the old code incorrectly
+    read from the top-level object, which does NOT contain these fields.
+
     Returns: { codechef_rating: int, codechef_solved: int }
     """
     resp = requests.get(
         f"https://codechef-stats.tashif.codes/{handle}",
+        headers=BROWSER_HEADERS,
         timeout=REQUEST_TIMEOUT,
     )
     resp.raise_for_status()
-    data = resp.json()
+    payload = resp.json()
+    # All actual data is inside the nested `data` object
+    data = payload.get("data") or {}
     return {
         "codechef_rating": int(data.get("currentRating", 0) or 0),
         "codechef_solved": int(data.get("totalSolved", 0) or 0),
@@ -177,33 +249,84 @@ def fetch_codechef(handle: str) -> dict:
 def fetch_gfg(handle: str) -> dict:
     """
     Fetch GeeksforGeeks overall coding score and total problems solved.
+
+    Real response shape:
+      {
+        "userName": "...",
+        "totalProblemsSolved": 1,     <- top-level convenience field
+        "status": "success",
+        "data": {
+          "totalSolved": 1,
+          "totalActiveDays": 1,
+          ...
+        }
+      }
+    NOTE: `score` does NOT exist at the top level. `totalSolved` is inside `data`.
+    We also use the top-level `totalProblemsSolved` as a fallback.
+    There is no explicit `overallCodingScore` field in this API — we use totalSolved
+    as the gfg_score metric as well (they are equivalent for ranking purposes).
+
     Returns: { gfg_score: int, gfg_solved: int }
     """
     resp = requests.get(
         f"https://gfg-stats.tashif.codes/{handle}",
+        headers=BROWSER_HEADERS,
         timeout=REQUEST_TIMEOUT,
     )
     resp.raise_for_status()
-    data = resp.json()
+    payload = resp.json()
+    # Prefer data.totalSolved, fall back to top-level totalProblemsSolved
+    data = payload.get("data") or {}
+    solved = int(
+        data.get("totalSolved")
+        or payload.get("totalProblemsSolved")
+        or 0
+    )
+    # No dedicated `score` field exists; mirror totalSolved as the score
+    score = solved
     return {
-        "gfg_score": int(data.get("score", 0) or 0),
-        "gfg_solved": int(data.get("totalSolved", 0) or 0),
+        "gfg_score": score,
+        "gfg_solved": solved,
     }
 
 
 def fetch_hackerrank(handle: str) -> dict:
     """
     Fetch HackerRank badge count.
+
+    Real response shape from /{handle}/badges:
+      {
+        "status": "success",
+        "badges": [ { "id": "...", "displayName": "..." }, ... ],
+        "data": {
+          "count": 3,
+          "active": { ... },
+          "list": [ ... ]
+        }
+      }
+    NOTE: The old code called `/{handle}` (the profile endpoint) and read
+    `badgesCount` — a key that does NOT exist. The correct endpoint is
+    `/{handle}/badges` and the count is at `data.count` (or len(badges)).
+
     Returns: { hackerrank_badges: int }
     """
     resp = requests.get(
-        f"https://hackerrank-stats.tashif.codes/{handle}",
+        # Use the dedicated /badges endpoint, not the base profile endpoint
+        f"https://hackerrank-stats.tashif.codes/{handle}/badges",
+        headers=BROWSER_HEADERS,
         timeout=REQUEST_TIMEOUT,
     )
     resp.raise_for_status()
-    data = resp.json()
+    payload = resp.json()
+    # Prefer data.count; fall back to counting the badges array directly
+    data = payload.get("data") or {}
+    count = int(
+        data.get("count")
+        if data.get("count") is not None
+        else len(payload.get("badges", []))
+    )
     return {
-        "hackerrank_badges": int(data.get("badgesCount", 0) or 0),
+        "hackerrank_badges": count,
     }
 
 
@@ -253,19 +376,29 @@ def calculate_score(snapshot: dict) -> float:
 
 def safe_fetch(fetcher, handle: str, platform: str, defaults: dict) -> dict:
     """
-    Safely calls a platform fetcher. On any exception, logs a warning and
-    returns the provided default values to keep the sync loop running.
+    Safely calls a platform fetcher. On any exception, logs a warning with the
+    full error message and returns the provided default values to keep the sync
+    loop running without aborting the entire member sync.
     """
     try:
         result = fetcher(handle)
         log.info("    ✓ %-12s -> %s", platform, result)
         return result
     except requests.exceptions.Timeout:
-        log.warning("    ✗ %-12s -> Timed out (handle=%s). Using defaults.", platform, handle)
+        log.warning(
+            "    ✗ %-12s -> Timed out after %ds (handle=%s). Using defaults.",
+            platform, REQUEST_TIMEOUT, handle,
+        )
     except requests.exceptions.HTTPError as exc:
         status = exc.response.status_code if exc.response is not None else "?"
+        body = ""
+        try:
+            body = exc.response.text[:200]  # log first 200 chars of error body
+        except Exception:  # noqa: BLE001
+            pass
         log.warning(
-            "    ✗ %-12s -> HTTP %s error (handle=%s). Using defaults.", platform, status, handle
+            "    ✗ %-12s -> HTTP %s (handle=%s). Body: %s. Using defaults.",
+            platform, status, handle, body,
         )
     except Exception as exc:  # noqa: BLE001
         log.warning(
