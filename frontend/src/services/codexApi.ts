@@ -158,7 +158,13 @@ export interface MemberProfile {
     gfg_hard: number;
     github_contributions: number;
     codeforces_rating: number;
+    codeforces_max_rating: number;
     codechef_rating: number;
+    codechef_max_rating: number;
+    leetcode_rating: number;
+    leetcode_max_rating: number;
+    gfg_solved: number;
+    gfg_score: number;
     hackerrank_badges: number;
     contests_attended: number;
     topic_stats: Record<string, number> | null;
@@ -194,8 +200,10 @@ export async function getMemberProfile(handle: string): Promise<MemberProfile | 
       .select(
         `snapshot_date, total_score, active_days, current_streak, max_streak,
          leetcode_easy, leetcode_medium, leetcode_hard, leetcode_total,
-         gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard,
-         github_contributions, codeforces_rating, codechef_rating,
+         leetcode_rating, leetcode_max_rating,
+         gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard, gfg_solved, gfg_score,
+         github_contributions, codeforces_rating, codeforces_max_rating,
+         codechef_rating, codechef_max_rating,
          hackerrank_badges, contests_attended, topic_stats, badges_detail`
       )
       .eq("member_id", member.id)
