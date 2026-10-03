@@ -31,4 +31,4 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           LEADERBOARD_GH_PAT: ${{ secrets.LEADERBOARD_GH_PAT }}
-        run: python scripts/sync_stats.py
+        run: python scripts/main.py
