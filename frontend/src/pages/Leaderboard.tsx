@@ -249,39 +249,111 @@ export default function Leaderboard() {
         {/* ── Club Command Center Banner ── */}
         {clubStats && (
           <ScrollReveal delay={0.05} className="mb-14">
-            <div className="bg-[#0707f2] border-4 border-slate-900 brutalist-shadow p-6 md:p-10 text-white flex flex-col md:flex-row items-center gap-8 md:gap-12 justify-between">
-              <div>
-                <h2 className="text-lg font-bold uppercase tracking-widest text-slate-300 mb-2">Club Command Center</h2>
-                <div className="text-6xl md:text-8xl font-black leading-none uppercase tracking-tighter">
-                  {clubStats.total_club_solved}
+            <div className="bg-[#0707f2] border-4 border-slate-900 brutalist-shadow flex flex-col">
+              <div className="p-6 md:p-10 text-white flex flex-col md:flex-row items-center gap-8 md:gap-12 justify-between">
+                <div>
+                  <h2 className="text-lg font-bold uppercase tracking-widest text-slate-300 mb-2">Club Command Center</h2>
+                  <div className="text-6xl md:text-8xl font-black leading-none uppercase tracking-tighter">
+                    {clubStats.total_club_solved}
+                  </div>
+                  <div className="text-sm font-bold uppercase tracking-widest text-slate-300 mt-2">
+                    Total Problems Solved
+                  </div>
                 </div>
-                <div className="text-sm font-bold uppercase tracking-widest text-slate-300 mt-2">
-                  Total Problems Solved
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full md:w-auto">
+                  <div className="border-2 border-white/20 p-4">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">LeetCode</div>
+                    <div className="text-2xl font-black leading-none">{clubStats.total_leetcode}</div>
+                  </div>
+                  <div className="border-2 border-white/20 p-4">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">GeeksForGeeks</div>
+                    <div className="text-2xl font-black leading-none">{clubStats.total_gfg}</div>
+                  </div>
+                  <div className="border-2 border-white/20 p-4">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">Codeforces</div>
+                    <div className="text-2xl font-black leading-none">{clubStats.total_codeforces}</div>
+                  </div>
+                  <div className="border-2 border-white/20 p-4">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">CodeChef</div>
+                    <div className="text-2xl font-black leading-none">{clubStats.total_codechef}</div>
+                  </div>
+                  <div className="border-2 border-white/20 p-4">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">HackerRank</div>
+                    <div className="text-2xl font-black leading-none">{clubStats.total_hackerrank_badges}</div>
+                    <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">Badges</div>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full md:w-auto">
-                <div className="border-2 border-white/20 p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">LeetCode</div>
-                  <div className="text-2xl font-black leading-none">{clubStats.total_leetcode}</div>
-                </div>
-                <div className="border-2 border-white/20 p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">GeeksForGeeks</div>
-                  <div className="text-2xl font-black leading-none">{clubStats.total_gfg}</div>
-                </div>
-                <div className="border-2 border-white/20 p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">Codeforces</div>
-                  <div className="text-2xl font-black leading-none">{clubStats.total_codeforces}</div>
-                </div>
-                <div className="border-2 border-white/20 p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">CodeChef</div>
-                  <div className="text-2xl font-black leading-none">{clubStats.total_codechef}</div>
-                </div>
-                <div className="border-2 border-white/20 p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">HackerRank</div>
-                  <div className="text-2xl font-black leading-none">{clubStats.total_hackerrank_badges}</div>
-                  <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">Badges</div>
-                </div>
-              </div>
+
+              {/* ── CLUB SKILL DISTRIBUTION ── */}
+              {(() => {
+                const totalSkill = clubStats.total_fundamentals + clubStats.total_dsa + clubStats.total_cp;
+                if (totalSkill === 0) return null;
+                return (
+                  <div className="border-t-4 border-slate-900 p-6 md:p-10 bg-white text-slate-900">
+                    <div className="mb-6">
+                      <span className="bg-slate-900 text-white px-2 py-1 text-xs font-black uppercase tracking-widest mb-2 inline-block">Mastery</span>
+                      <h3 className="text-2xl font-black uppercase tracking-tight text-slate-900 border-b-4 border-slate-900 pb-2">Club Skill Distribution</h3>
+                    </div>
+                    
+                    {/* Stacked Bar */}
+                    <div className="w-full flex h-12 md:h-16 border-4 border-slate-900 bg-slate-100 mb-4 brutalist-shadow-sm">
+                      {clubStats.total_fundamentals > 0 && (
+                        <div 
+                          className="bg-[#facc15] h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all duration-500 hover:brightness-110"
+                          style={{ width: `${(clubStats.total_fundamentals / totalSkill) * 100}%` }}
+                          title={`Fundamentals: ${clubStats.total_fundamentals}`}
+                        />
+                      )}
+                      {clubStats.total_dsa > 0 && (
+                        <div 
+                          className="bg-[#38bdf8] h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all duration-500 hover:brightness-110"
+                          style={{ width: `${(clubStats.total_dsa / totalSkill) * 100}%` }}
+                          title={`DSA: ${clubStats.total_dsa}`}
+                        />
+                      )}
+                      {clubStats.total_cp > 0 && (
+                        <div 
+                          className="bg-[#ef4444] h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all duration-500 hover:brightness-110"
+                          style={{ width: `${(clubStats.total_cp / totalSkill) * 100}%` }}
+                          title={`CP: ${clubStats.total_cp}`}
+                        />
+                      )}
+                    </div>
+                    
+                    {/* Legend */}
+                    <div className="flex flex-wrap gap-4 md:gap-8 mt-4">
+                      {clubStats.total_fundamentals > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-[#facc15] border-2 border-slate-900" />
+                          <div className="flex flex-col leading-none">
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-900">Fundamentals</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">{clubStats.total_fundamentals} problems ({Math.round((clubStats.total_fundamentals / totalSkill) * 100)}%)</span>
+                          </div>
+                        </div>
+                      )}
+                      {clubStats.total_dsa > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-[#38bdf8] border-2 border-slate-900" />
+                          <div className="flex flex-col leading-none">
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-900">DSA</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">{clubStats.total_dsa} problems ({Math.round((clubStats.total_dsa / totalSkill) * 100)}%)</span>
+                          </div>
+                        </div>
+                      )}
+                      {clubStats.total_cp > 0 && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-[#ef4444] border-2 border-slate-900" />
+                          <div className="flex flex-col leading-none">
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-900">Competitive</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">{clubStats.total_cp} problems ({Math.round((clubStats.total_cp / totalSkill) * 100)}%)</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </ScrollReveal>
         )}

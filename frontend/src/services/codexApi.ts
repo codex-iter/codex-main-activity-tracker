@@ -140,6 +140,9 @@ export interface ClubStatsSummary {
   total_gfg: number;
   total_hackerrank_badges: number;
   total_club_solved: number;
+  total_fundamentals: number;
+  total_dsa: number;
+  total_cp: number;
 }
 
 export async function getClubStatsSummary(): Promise<ClubStatsSummary> {
@@ -150,6 +153,9 @@ export async function getClubStatsSummary(): Promise<ClubStatsSummary> {
     total_gfg: 0,
     total_hackerrank_badges: 0,
     total_club_solved: 0,
+    total_fundamentals: 0,
+    total_dsa: 0,
+    total_cp: 0,
   };
 
   try {
@@ -173,6 +179,9 @@ export async function getClubStatsSummary(): Promise<ClubStatsSummary> {
       total_gfg: data.total_gfg || 0,
       total_hackerrank_badges: data.total_hackerrank_badges || 0,
       total_club_solved: data.total_club_solved || 0,
+      total_fundamentals: data.total_fundamentals || 0,
+      total_dsa: data.total_dsa || 0,
+      total_cp: data.total_cp || 0,
     };
   } catch (err) {
     console.error("[codexApi] getClubStatsSummary error:", err);
@@ -188,7 +197,14 @@ export interface MemberProfile {
   roll_number: string | null;
   avatar_url: string | null;
   github_handle: string | null;
+  leetcode_handle: string | null;
+  codeforces_handle: string | null;
+  codechef_handle: string | null;
+  gfg_handle: string | null;
+  hackerrank_handle: string | null;
+  bio: string | null;
   linkedin_url: string | null;
+  github_url: string | null;
   portfolio_url: string | null;
   snapshot: {
     snapshot_date: string;
@@ -232,7 +248,7 @@ export async function getMemberProfile(handle: string): Promise<MemberProfile | 
     const { data: members, error } = await supabase
       .from("members")
       .select(
-        "id, full_name, roll_number, avatar_url, github_handle, linkedin_url, portfolio_url"
+        "id, full_name, roll_number, avatar_url, github_handle, leetcode_handle, codeforces_handle, codechef_handle, gfg_handle, hackerrank_handle, bio, linkedin_url, github_url, portfolio_url"
       )
       .eq(field, handle)
       .limit(1);
