@@ -1,0 +1,276 @@
+import asyncio
+import logging
+import subprocess
+import re
+from datetime import datetime, timezone
+import aiohttp
+
+from db import get_supabase_client, get_active_members, upsert_snapshot
+from scoring import calculate_score
+from fetchers import (
+    fetch_github,
+    fetch_codeforces,
+    fetch_leetcode,
+    fetch_codechef,
+    fetch_gfg,
+    fetch_hackerrank,
+)
+from fetchers.utils import REQUEST_TIMEOUT
+
+# ---------------------------------------------------------------------------
+# Logging Configuration
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-8s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+log = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+CHUNK_SIZE        = 10           # members processed concurrently per batch
+INTER_CHUNK_SLEEP = 3            # seconds to sleep between member chunks
+
+# ---------------------------------------------------------------------------
+# Snapshot Assembly: JSONB Aggregation
+# ---------------------------------------------------------------------------
+
+def sanitize_topic_map(topics: dict) -> dict:
+    sanitized = {}
+    ignore_pattern = re.compile(r"start\d+|_adm$|admin|cakewalk|simple", re.IGNORECASE)
+    
+    aliases = {
+        "two-pointer-algorithm": "Two Pointers",
+        "two pointers": "Two Pointers",
+        "sieve": "Math",
+    }
+    
+    for k, v in topics.items():
+        if ignore_pattern.search(k):
+            continue
+        clean_k = aliases.get(k.lower(), k.replace("-", " ").title())
+        sanitized[clean_k] = sanitized.get(clean_k, 0) + v
+        
+    return sanitized
+
+def build_topic_stats(lc_summary: dict, cc_topics: dict, gfg_topics: dict, hr_topics: dict) -> dict:
+    lc_topics = {}
+    try:
+        tag_counts = lc_summary.get("tagProblemCounts") or {}
+        for section in ("advanced", "intermediate", "fundamental"):
+            for item in tag_counts.get(section, []):
+                name = item.get("tagName") or item.get("tagSlug", "")
+                count = int(item.get("problemsSolved") or 0)
+                if name:
+                    lc_topics[name] = lc_topics.get(name, 0) + count
+    except Exception:
+        pass
+
+    return {
+        "leetcode": sanitize_topic_map(lc_topics),
+        "codechef": sanitize_topic_map(cc_topics),
+        "gfg": sanitize_topic_map(gfg_topics),
+        "hackerrank": sanitize_topic_map(hr_topics),
+    }
+
+def build_badges_detail(lc_badges_list: list, lc_badge_name: str, hr_badges_list: list) -> list:
+    badges = []
+    for b in lc_badges_list:
+        badges.append({"platform": "leetcode", "id": b.get("name", ""), "name": b.get("name", ""), "icon": b.get("icon")})
+    if lc_badge_name and not any(b.get("name") == lc_badge_name for b in badges):
+        badges.append({"platform": "leetcode", "id": "lc_badge", "name": lc_badge_name})
+    for b in hr_badges_list:
+        badges.append({"platform": "hackerrank", "id": b.get("id", ""), "name": b.get("name", "")})
+    return badges
+
+
+# ---------------------------------------------------------------------------
+# Async Per-Member Sync
+# ---------------------------------------------------------------------------
+
+async def sync_member_async(session: aiohttp.ClientSession, member: dict, today: str) -> dict:
+    member_id = member["id"]
+    name = member.get("full_name", "Unknown")
+    log.info("  → Syncing: %s (%s)", name, member_id)
+
+    snapshot = {
+        "member_id": member_id,
+        "snapshot_date": today,
+        "github_contributions": 0, "github_repos": 0,
+        "codeforces_rating": 0, "codeforces_solved": 0, "codeforces_max_rating": 0, "codeforces_rank_title": "Unrated",
+        "leetcode_easy": 0, "leetcode_medium": 0, "leetcode_hard": 0, "leetcode_total": 0,
+        "leetcode_rating": 0, "leetcode_max_rating": 0,
+        "codechef_rating": 0, "codechef_solved": 0, "codechef_max_rating": 0,
+        "gfg_score": 0, "gfg_solved": 0,
+        "gfg_school": 0, "gfg_basic": 0, "gfg_easy": 0, "gfg_medium": 0, "gfg_hard": 0,
+        "hackerrank_badges": 0,
+        "total_score": 0.0,
+        "active_days": 0, "current_streak": 0, "max_streak": 0, "total_submissions": 0,
+        "contests_attended": 0, "leetcode_contests": 0, "codeforces_contests": 0, "codechef_contests": 0,
+        "topic_stats": {}, "badges_detail": [],
+    }
+
+    gh_handle  = member.get("github_handle")
+    cf_handle  = member.get("codeforces_handle")
+    lc_handle  = member.get("leetcode_handle")
+    cc_handle  = member.get("codechef_handle")
+    gfg_handle = member.get("gfg_handle")
+    hr_handle  = member.get("hackerrank_handle")
+
+    async def _noop() -> dict: return {}
+
+    gh_data, cf_data, lc_data, cc_data, gfg_data, hr_data = await asyncio.gather(
+        fetch_github(session, gh_handle) if gh_handle else _noop(),
+        fetch_codeforces(session, cf_handle) if cf_handle else _noop(),
+        fetch_leetcode(session, lc_handle) if lc_handle else _noop(),
+        fetch_codechef(session, cc_handle) if cc_handle else _noop(),
+        fetch_gfg(session, gfg_handle) if gfg_handle else _noop(),
+        fetch_hackerrank(session, hr_handle) if hr_handle else _noop(),
+        return_exceptions=False,
+    )
+
+    _lc_badges_list = []; _lc_badge_name = ""; _hr_badges_list = []
+    _cc_topics = {}; _gfg_topics = {}; _hr_topics = {}; _lc_summary = {}
+    _cf_contests = 0; _lc_contests = 0; _cc_contests = 0
+
+    if gh_handle and gh_data:
+        snapshot.update({
+            "github_contributions": gh_data.get("github_contributions", 0),
+            "github_repos": gh_data.get("github_repos", 0),
+        })
+
+    if cf_handle and cf_data:
+        snapshot.update({
+            "codeforces_rating": cf_data.get("codeforces_rating", 0),
+            "codeforces_max_rating": cf_data.get("codeforces_max_rating", 0),
+            "codeforces_rank_title": cf_data.get("codeforces_rank_title", "Unrated"),
+            "codeforces_solved": cf_data.get("codeforces_solved", 0),
+            "codeforces_contests": cf_data.get("cf_contests_attended", 0)
+        })
+        _cf_contests = cf_data.get("cf_contests_attended", 0)
+
+    if lc_handle and lc_data:
+        snapshot.update({
+            "leetcode_easy": lc_data.get("leetcode_easy", 0),
+            "leetcode_medium": lc_data.get("leetcode_medium", 0),
+            "leetcode_hard": lc_data.get("leetcode_hard", 0),
+            "leetcode_total": lc_data.get("leetcode_total", 0),
+            "leetcode_rating": lc_data.get("leetcode_rating", 0),
+            "leetcode_max_rating": lc_data.get("leetcode_max_rating", 0),
+            "leetcode_contests": lc_data.get("lc_contests_attended", 0)
+        })
+        _lc_contests = lc_data.get("lc_contests_attended", 0)
+        _lc_badge_name = lc_data.get("lc_badge_name", "")
+        _lc_badges_list = lc_data.get("_lc_badges_list", [])
+        _lc_summary = lc_data.get("_lc_summary", {})
+
+    if cc_handle and cc_data:
+        snapshot.update({
+            "codechef_rating": cc_data.get("codechef_rating", 0),
+            "codechef_max_rating": cc_data.get("codechef_max_rating", 0),
+            "codechef_solved": cc_data.get("codechef_solved", 0),
+            "codechef_contests": cc_data.get("cc_contests_attended", 0)
+        })
+        _cc_topics = cc_data.get("cc_topics", {})
+        _cc_contests = cc_data.get("cc_contests_attended", 0)
+        snapshot["active_days"] += cc_data.get("cc_active_days", 0)
+        snapshot["total_submissions"] += cc_data.get("cc_total_submissions", 0)
+        snapshot["current_streak"] = max(snapshot["current_streak"], cc_data.get("cc_current_streak", 0))
+        snapshot["max_streak"] = max(snapshot["max_streak"], cc_data.get("cc_max_streak", 0))
+
+    if gfg_handle and gfg_data:
+        snapshot.update({
+            "gfg_solved": gfg_data.get("gfg_solved", 0),
+            "gfg_score": gfg_data.get("gfg_score", 0),
+            "gfg_school": gfg_data.get("gfg_school", 0),
+            "gfg_basic": gfg_data.get("gfg_basic", 0),
+            "gfg_easy": gfg_data.get("gfg_easy", 0),
+            "gfg_medium": gfg_data.get("gfg_medium", 0),
+            "gfg_hard": gfg_data.get("gfg_hard", 0),
+        })
+        _gfg_topics = gfg_data.get("gfg_topics", {})
+        snapshot["active_days"] += gfg_data.get("gfg_active_days", 0)
+        snapshot["total_submissions"] += gfg_data.get("gfg_total_submissions", 0)
+        snapshot["current_streak"] = max(snapshot["current_streak"], gfg_data.get("gfg_current_streak", 0))
+        snapshot["max_streak"] = max(snapshot["max_streak"], gfg_data.get("gfg_max_streak", 0))
+
+    if hr_handle and hr_data:
+        snapshot["hackerrank_badges"] = hr_data.get("hackerrank_badges", 0)
+        _hr_badges_list = hr_data.get("hr_badges_list", [])
+        _hr_topics = hr_data.get("hr_topics", {})
+
+    snapshot["contests_attended"] = _cf_contests + _lc_contests + _cc_contests
+    snapshot["topic_stats"] = build_topic_stats(_lc_summary, _cc_topics, _gfg_topics, _hr_topics)
+    snapshot["badges_detail"] = build_badges_detail(_lc_badges_list, _lc_badge_name, _hr_badges_list)
+
+    snapshot["total_score"] = calculate_score(snapshot)
+    log.info("  ✓ %s — Score: %.2f", name, snapshot["total_score"])
+
+    return snapshot
+
+
+# ---------------------------------------------------------------------------
+# Async Main Orchestrator
+# ---------------------------------------------------------------------------
+
+async def run_sync() -> None:
+    log.info("=" * 60)
+    log.info("CODEX Stats Sync Pipeline — %s UTC", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))
+    log.info("Async mode: CHUNK_SIZE=%d, INTER_CHUNK_SLEEP=%ds, TIMEOUT=%ds", CHUNK_SIZE, INTER_CHUNK_SLEEP, REQUEST_TIMEOUT)
+    log.info("=" * 60)
+
+    supabase_client = get_supabase_client()
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    log.info("Fetching active members from Supabase...")
+    members = get_active_members(supabase_client)
+    log.info("Found %d active member(s).", len(members))
+
+    if not members:
+        return
+
+    chunks = [members[i : i + CHUNK_SIZE] for i in range(0, len(members), CHUNK_SIZE)]
+    total_chunks = len(chunks)
+    success_count = fail_count = 0
+
+    connector = aiohttp.TCPConnector(limit=50)
+    async with aiohttp.ClientSession(connector=connector) as session:
+        for chunk_idx, chunk in enumerate(chunks, start=1):
+            log.info("-" * 60 + f"\nChunk {chunk_idx}/{total_chunks} — processing {len(chunk)} member(s)...")
+
+            tasks = [sync_member_async(session, m, today) for m in chunk]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            for member, result in zip(chunk, results):
+                name = member.get("full_name", member["id"])
+                if isinstance(result, Exception):
+                    log.error("  ✗ Failed to sync %s: %s", name, result)
+                    fail_count += 1
+                    continue
+                try:
+                    upsert_snapshot(supabase_client, result)
+                    log.info("  ✓ Upserted snapshot for %s", name)
+                    success_count += 1
+                except Exception as exc:  # noqa: BLE001
+                    log.error("  ✗ Supabase upsert failed for %s: %s", name, exc)
+                    fail_count += 1
+
+            if chunk_idx < total_chunks:
+                log.info("  ⏳ Sleeping %ds before next chunk...", INTER_CHUNK_SLEEP)
+                await asyncio.sleep(INTER_CHUNK_SLEEP)
+
+    log.info("=" * 60)
+    log.info("Sync complete. Success: %d | Failed: %d", success_count, fail_count)
+    log.info("=" * 60)
+
+    try:
+        log.info("Starting rolling GitHub contribution aggregate sync...")
+        subprocess.run(["python", "scripts/backfill_club_github.py"], check=True)
+        log.info("GitHub contribution sync finished successfully.")
+    except Exception as exc:
+        log.error("Failed to run GitHub sync hook: %s", exc)
+
+if __name__ == "__main__":
+    asyncio.run(run_sync())

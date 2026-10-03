@@ -1,0 +1,88 @@
+import asyncio
+import logging
+import aiohttp
+from .utils import safe_fetch, _safe_int
+
+log = logging.getLogger(__name__)
+
+async def fetch_gfg(session: aiohttp.ClientSession, handle: str) -> dict:
+    """
+    Fetches GFG metrics across four endpoints concurrently. All data inside `data: {}`.
+
+    1. GET /{handle}          -> data.totalSolved  (top-level totalProblemsSolved as fallback)
+    2. GET /{handle}/heatmap  -> data.{ totalSubmissions, currentStreak, longestStreak, totalActiveDays }
+    3. GET /{handle}/stats    -> data.{
+           byDifficulty: { school, basic, easy, medium, hard },
+           topicAnalysis: [{topic, count}]
+         }
+    4. GET /{handle}/rating   -> data.{ current (max rating if available) }
+
+    Returns: {
+      gfg_solved, gfg_score,
+      gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard,
+      gfg_active_days, gfg_total_submissions, gfg_current_streak, gfg_max_streak,
+      gfg_max_rating, gfg_topics
+    }
+    """
+    BASE = f"https://gfg-stats.tashif.codes/{handle}"
+
+    summary_payload, heatmap_resp, stats_resp, rating_resp = await asyncio.gather(
+        safe_fetch(session, BASE),
+        safe_fetch(session, f"{BASE}/heatmap"),
+        safe_fetch(session, f"{BASE}/stats"),
+        safe_fetch(session, f"{BASE}/rating"),
+    )
+
+    # 1. Summary
+    summary_data = summary_payload.get("data") or {}
+    solved = _safe_int(
+        summary_data.get("totalSolved")
+        or summary_payload.get("totalProblemsSolved")
+    )
+
+    # 2. Heatmap -> streak & submission counts
+    heatmap = heatmap_resp.get("data") or {}
+    gfg_total_subs = _safe_int(heatmap.get("totalSubmissions"))
+    gfg_current_streak = _safe_int(heatmap.get("currentStreak"))
+    gfg_max_streak = _safe_int(heatmap.get("longestStreak"))
+    gfg_active_days = _safe_int(heatmap.get("totalActiveDays"))
+
+    # 3. Difficulty breakdown + topics
+    stats_data = stats_resp.get("data") or {}
+    by_diff = stats_data.get("byDifficulty") or {}
+    gfg_school = _safe_int(by_diff.get("school"))
+    gfg_basic  = _safe_int(by_diff.get("basic"))
+    gfg_easy   = _safe_int(by_diff.get("easy"))
+    gfg_medium = _safe_int(by_diff.get("medium"))
+    gfg_hard   = _safe_int(by_diff.get("hard"))
+    gfg_topics = {
+        item["topic"]: item["count"]
+        for item in stats_data.get("topicAnalysis", [])
+        if item.get("topic")
+    }
+
+    # 4. Rating (may be null for non-contest users)
+    rating_data = rating_resp.get("data") or {}
+    _gfg_max_rating = _safe_int(rating_data.get("max"))
+
+    # Use totalSolved as score
+    score = solved
+
+    result = {
+        "gfg_solved": solved,
+        "gfg_score": score,
+        "gfg_school": gfg_school,
+        "gfg_basic": gfg_basic,
+        "gfg_easy": gfg_easy,
+        "gfg_medium": gfg_medium,
+        "gfg_hard": gfg_hard,
+        "gfg_active_days": gfg_active_days,
+        "gfg_total_submissions": gfg_total_subs,
+        "gfg_current_streak": gfg_current_streak,
+        "gfg_max_streak": gfg_max_streak,
+        "gfg_max_rating": _gfg_max_rating,
+        "gfg_topics": gfg_topics,
+    }
+    log.info("    ✓ GFG          -> solved=%d streak=%d [S=%d B=%d E=%d M=%d H=%d]",
+             solved, gfg_current_streak, gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard)
+    return result
