@@ -4,8 +4,10 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from datetime import datetime, timedelta
 
-# Load environment variables (from .env or .env.local if present)
-load_dotenv(".env.local")
+# Load environment variables from frontend/.env.local
+current_dir = os.path.dirname(os.path.abspath(__file__))
+env_path = os.path.join(current_dir, "..", "frontend", ".env.local")
+load_dotenv(env_path)
 
 SUPABASE_URL = os.environ.get("VITE_SUPABASE_URL") or os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("VITE_SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
