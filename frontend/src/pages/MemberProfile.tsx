@@ -132,6 +132,40 @@ function PlatformPill({
   );
 }
 
+// ── Platform Overview Card ────────────────────────────────────────────────
+
+function PlatformCard({
+  platform,
+  children,
+}: {
+  platform: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-4 border-slate-900 bg-white p-5 flex flex-col brutalist-shadow-sm hover:-translate-y-1 hover:-translate-x-1 transition-transform">
+      <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 border-b-4 border-slate-900 pb-2 mb-4">
+        {platform}
+      </h3>
+      <div className="flex-1 flex flex-col gap-3 justify-center">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex justify-between items-end gap-2 border-b-2 border-slate-100 pb-1 last:border-0 last:pb-0">
+      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 leading-none pb-0.5">
+        {label}
+      </span>
+      <span className="text-sm font-black text-slate-900 leading-none text-right">
+        {value}
+      </span>
+    </div>
+  );
+}
+
 // ── Topic tag ─────────────────────────────────────────────────────────────
 
 function TopicTag({ topic, count }: { topic: string; count: number }) {
@@ -427,6 +461,47 @@ export default function MemberProfile() {
               </StaggerItem>
             )}
 
+            {/* ── CONTEST RANKINGS ── */}
+            {s && (
+              <StaggerItem>
+                <div className="border-4 border-slate-900 bg-white p-6 md:p-8 brutalist-shadow">
+                  <div className="mb-6">
+                    <Label>Competitive</Label>
+                    <SectionTitle>Contest Rankings</SectionTitle>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="border-4 border-slate-900 p-5 flex flex-col items-center justify-center text-center brutalist-shadow-sm hover:-translate-y-1 transition-transform bg-white">
+                      <span className="text-sm font-black uppercase tracking-widest text-slate-500 mb-2">LeetCode</span>
+                      <span className="text-5xl font-black text-slate-900 leading-none">
+                        {s.leetcode_rating || 0}
+                      </span>
+                      <span className="text-xs font-bold uppercase text-slate-400 mt-2">
+                        (Max: {s.leetcode_max_rating || 0})
+                      </span>
+                    </div>
+                    <div className="border-4 border-slate-900 p-5 flex flex-col items-center justify-center text-center brutalist-shadow-sm hover:-translate-y-1 transition-transform bg-white">
+                      <span className="text-sm font-black uppercase tracking-widest text-slate-500 mb-2">CodeChef</span>
+                      <span className="text-5xl font-black text-slate-900 leading-none">
+                        {s.codechef_rating || 0}
+                      </span>
+                      <span className="text-xs font-bold uppercase text-slate-400 mt-2">
+                        (Max: {s.codechef_max_rating || 0})
+                      </span>
+                    </div>
+                    <div className="border-4 border-slate-900 p-5 flex flex-col items-center justify-center text-center brutalist-shadow-sm hover:-translate-y-1 transition-transform bg-white">
+                      <span className="text-sm font-black uppercase tracking-widest text-slate-500 mb-2">Codeforces</span>
+                      <span className="text-5xl font-black text-slate-900 leading-none">
+                        {s.codeforces_rating || 0}
+                      </span>
+                      <span className="text-xs font-bold uppercase text-slate-400 mt-2">
+                        (Max: {s.codeforces_max_rating || 0})
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </StaggerItem>
+            )}
+
             {/* ── DIFFICULTY BREAKDOWN ── */}
             {s && (lcTotal > 0 || gfgTotal > 0) && (
               <StaggerItem>
@@ -488,21 +563,51 @@ export default function MemberProfile() {
               </StaggerItem>
             )}
 
-            {/* ── PLATFORM STATS ── */}
+            {/* ── PLATFORM OVERVIEW ── */}
             {s && (
               <StaggerItem>
                 <div className="border-4 border-slate-900 bg-white p-6 md:p-8 brutalist-shadow">
-                  <div className="mb-6">
-                    <Label>Platforms</Label>
-                    <SectionTitle>Stats &amp; Ratings</SectionTitle>
+                  <div className="mb-6 flex justify-between items-end gap-4 flex-wrap">
+                    <div>
+                      <Label>Platforms</Label>
+                      <SectionTitle>Platform Overview</SectionTitle>
+                    </div>
+                    <div className="flex gap-2">
+                      <PlatformPill platform="Contests" value={s.contests_attended ?? 0} />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    <PlatformPill platform="GitHub"      value={s.github_contributions} unit="contrib" />
-                    <PlatformPill platform="Codeforces"  value={s.codeforces_rating}    unit="rating" />
-                    <PlatformPill platform="CodeChef"    value={s.codechef_rating}      unit="rating" />
-                    <PlatformPill platform="HackerRank"  value={s.hackerrank_badges}    unit="badges" />
-                    <PlatformPill platform="Contests"    value={s.contests_attended}    unit="attended" />
-                    <PlatformPill platform="Active Days" value={s.active_days}          unit="days" />
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    <PlatformCard platform="Codeforces">
+                      <StatRow label="Rank" value={s.codeforces_rank_title || "Unrated"} />
+                      <StatRow label="Rating" value={s.codeforces_rating || 0} />
+                      <StatRow label="Max Rating" value={s.codeforces_max_rating || 0} />
+                      <StatRow label="Solved" value={s.codeforces_solved || 0} />
+                    </PlatformCard>
+                    
+                    <PlatformCard platform="CodeChef">
+                      <StatRow label="Rating" value={s.codechef_rating || 0} />
+                      <StatRow label="Max Rating" value={s.codechef_max_rating || 0} />
+                      <StatRow label="Solved" value={s.codechef_solved || 0} />
+                    </PlatformCard>
+
+                    <PlatformCard platform="LeetCode">
+                      <StatRow label="Total Solved" value={s.leetcode_total || 0} />
+                      <StatRow label="Max Rating" value={s.leetcode_max_rating || 0} />
+                    </PlatformCard>
+
+                    <PlatformCard platform="GeeksForGeeks">
+                      <StatRow label="Coding Score" value={s.gfg_score || 0} />
+                      <StatRow label="Total Solved" value={s.gfg_solved || 0} />
+                    </PlatformCard>
+
+                    <PlatformCard platform="GitHub">
+                      <StatRow label="Contributions" value={s.github_contributions || 0} />
+                    </PlatformCard>
+
+                    <PlatformCard platform="HackerRank">
+                      <StatRow label="Badges" value={s.hackerrank_badges || 0} />
+                    </PlatformCard>
                   </div>
                 </div>
               </StaggerItem>

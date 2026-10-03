@@ -315,12 +315,14 @@ async def fetch_leetcode(session: aiohttp.ClientSession, handle: str) -> dict:
 
     # 3. Contest history
     lc_contests = 0
+    lc_rating = 0
     lc_max_rating = 0
     lc_badge = ""
     try:
         ranking = contest_data.get("userContestRanking") or {}
         lc_contests = _safe_int(ranking.get("attendedContestsCount"))
         current_rating = _safe_float(ranking.get("rating"))
+        lc_rating = int(current_rating)
         lc_badge = (ranking.get("badge") or {}).get("name") or ""
 
         history = contest_data.get("userContestRankingHistory") or []
@@ -338,6 +340,7 @@ async def fetch_leetcode(session: aiohttp.ClientSession, handle: str) -> dict:
         "leetcode_medium": medium,
         "leetcode_hard": hard,
         "leetcode_total": total,
+        "leetcode_rating": lc_rating,
         "leetcode_max_rating": lc_max_rating,
         "lc_contests_attended": lc_contests,
         "lc_badge_name": lc_badge,
@@ -732,6 +735,7 @@ async def sync_member_async(
         "leetcode_medium": 0,
         "leetcode_hard": 0,
         "leetcode_total": 0,
+        "leetcode_rating": 0,
         "codechef_rating": 0,
         "codechef_solved": 0,
         "gfg_score": 0,
