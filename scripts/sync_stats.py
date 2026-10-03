@@ -825,6 +825,7 @@ async def sync_member_async(
         snapshot["leetcode_medium"]      = lc_data.get("leetcode_medium", 0)
         snapshot["leetcode_hard"]        = lc_data.get("leetcode_hard", 0)
         snapshot["leetcode_total"]       = lc_data.get("leetcode_total", 0)
+        snapshot["leetcode_rating"]      = lc_data.get("leetcode_rating", 0)
         snapshot["leetcode_max_rating"]  = lc_data.get("leetcode_max_rating", 0)
         _lc_contests                     = lc_data.get("lc_contests_attended", 0)
         _lc_badge_name                   = lc_data.get("lc_badge_name", "")
