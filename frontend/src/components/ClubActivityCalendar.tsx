@@ -165,13 +165,13 @@ export default function ClubActivityCalendar() {
                 }}
                 showWeekdayLabels
                 renderBlock={(block, activity) =>
-                  React.cloneElement(block as React.ReactElement, {
+                  React.cloneElement(block as any, {
                     onMouseEnter: (e: React.MouseEvent) => {
                       const rect = (e.target as Element).getBoundingClientRect();
                       setTooltip({
                         x: rect.left + rect.width / 2,
                         y: rect.top,
-                        activity,
+                        activity: activity as any,
                         label: "PROBLEMS"
                       });
                     },
@@ -205,13 +205,13 @@ export default function ClubActivityCalendar() {
                 }}
                 showWeekdayLabels
                 renderBlock={(block, activity) =>
-                  React.cloneElement(block as React.ReactElement, {
+                  React.cloneElement(block as any, {
                     onMouseEnter: (e: React.MouseEvent) => {
                       const rect = (e.target as Element).getBoundingClientRect();
                       setTooltip({
                         x: rect.left + rect.width / 2,
                         y: rect.top,
-                        activity,
+                        activity: activity as any,
                         label: "COMMITS"
                       });
                     },
