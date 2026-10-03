@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityCalendar, type ThemeInput } from "react-activity-calendar";
 import { getClubActivityMap, type ActivityDay } from "../services/codexApi";
 
@@ -57,6 +57,7 @@ export default function ClubActivityCalendar() {
   const [days, setDays] = useState<ActivityDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; activity: ActivityDay } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,7 +83,7 @@ export default function ClubActivityCalendar() {
   const activeDays   = days.filter((d) => d.count > 0).length;
 
   return (
-    <section className="bg-background-dark border-4 border-slate-900 p-6 md:p-10 brutalist-shadow">
+    <section className="bg-background-dark border-4 border-slate-900 p-6 md:p-10 brutalist-shadow relative">
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
@@ -121,7 +122,7 @@ export default function ClubActivityCalendar() {
       </div>
 
       {/* ── Calendar ── */}
-      <div className="w-full overflow-x-auto pb-2">
+      <div className="w-full overflow-x-auto pb-2 relative">
         {loading && <CalendarSkeleton />}
 
         {!loading && error && <CalendarError message={error} />}
@@ -129,24 +130,58 @@ export default function ClubActivityCalendar() {
         {!loading && !error && days.length === 0 && <CalendarEmpty />}
 
         {!loading && !error && days.length > 0 && (
-          <ActivityCalendar
-            data={days}
-            theme={CODEX_THEME}
-            colorScheme="dark"
-            blockSize={14}
-            blockMargin={4}
-            blockRadius={2}
-            fontSize={12}
-            labels={{
-              legend: { less: "Less", more: "More" },
-              totalCount: "{{count}} actions in {{year}}",
-            }}
-            style={{
-              color: "#94a3b8", // slate-400 for month/day labels
-              fontFamily: "'Space Grotesk', sans-serif",
-            }}
-            showWeekdayLabels
-          />
+          <>
+            <ActivityCalendar
+              data={days}
+              theme={CODEX_THEME}
+              colorScheme="dark"
+              blockSize={14}
+              blockMargin={4}
+              blockRadius={2}
+              fontSize={12}
+              labels={{
+                legend: { less: "Less", more: "More" },
+                totalCount: "{{count}} actions in {{year}}",
+              }}
+              style={{
+                color: "#94a3b8", // slate-400 for month/day labels
+                fontFamily: "'Space Grotesk', sans-serif",
+              }}
+              showWeekdayLabels
+              renderBlock={(block, activity) =>
+                React.cloneElement(block as React.ReactElement, {
+                  onMouseEnter: (e: React.MouseEvent) => {
+                    const rect = (e.target as Element).getBoundingClientRect();
+                    setTooltip({
+                      x: rect.left + rect.width / 2,
+                      y: rect.top,
+                      activity,
+                    });
+                  },
+                  onMouseLeave: () => setTooltip(null),
+                  className: "transition-transform duration-150 hover:scale-125 hover:z-20 cursor-pointer style-transform-box",
+                  style: { transformBox: 'fill-box', transformOrigin: 'center' }
+                })
+              }
+            />
+
+            {/* Tooltip Portal */}
+            {tooltip && (
+              <div
+                className="fixed z-[100] pointer-events-none -translate-x-1/2 -translate-y-[120%]"
+                style={{ left: tooltip.x, top: tooltip.y }}
+              >
+                <div className="bg-slate-900 text-white border-2 border-black rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] px-4 py-3 flex flex-col items-center text-center min-w-[140px]">
+                  <span className="font-bold text-xs uppercase tracking-widest text-slate-400 mb-1 border-b-2 border-slate-700 pb-1 w-full">
+                    {new Date(tooltip.activity.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}
+                  </span>
+                  <span className="font-black text-lg text-white mt-1 uppercase tracking-tight">
+                    {tooltip.activity.count} Solved
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

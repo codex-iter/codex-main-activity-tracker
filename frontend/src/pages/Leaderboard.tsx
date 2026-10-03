@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "../components/animations/ScrollReveal";
 import SEO from "../components/SEO";
-import { getDailyLeaderboard, type LeaderboardEntry } from "../services/codexApi";
+import { getDailyLeaderboard, type LeaderboardEntry, getClubStatsSummary, type ClubStatsSummary } from "../services/codexApi";
 import ClubActivityCalendar from "../components/ClubActivityCalendar";
 
 // ── Rank badge colours ────────────────────────────────────────────────────
@@ -183,6 +183,7 @@ function ErrorState({ message }: { message: string }) {
 
 export default function Leaderboard() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [clubStats, setClubStats] = useState<ClubStatsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -201,8 +202,14 @@ export default function Leaderboard() {
       try {
         setLoading(true);
         setError(null);
-        const data = await getDailyLeaderboard();
-        if (!cancelled) setEntries(data);
+        const [lbData, statsData] = await Promise.all([
+          getDailyLeaderboard(),
+          getClubStatsSummary()
+        ]);
+        if (!cancelled) {
+          setEntries(lbData);
+          setClubStats(statsData);
+        }
       } catch (err: unknown) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Unknown error");
@@ -238,6 +245,46 @@ export default function Leaderboard() {
             GeeksforGeeks, and HackerRank.
           </p>
         </ScrollReveal>
+
+        {/* ── Club Command Center Banner ── */}
+        {clubStats && (
+          <ScrollReveal delay={0.05} className="mb-14">
+            <div className="bg-[#0707f2] border-4 border-slate-900 brutalist-shadow p-6 md:p-10 text-white flex flex-col md:flex-row items-center gap-8 md:gap-12 justify-between">
+              <div>
+                <h2 className="text-lg font-bold uppercase tracking-widest text-slate-300 mb-2">Club Command Center</h2>
+                <div className="text-6xl md:text-8xl font-black leading-none uppercase tracking-tighter">
+                  {clubStats.total_club_solved}
+                </div>
+                <div className="text-sm font-bold uppercase tracking-widest text-slate-300 mt-2">
+                  Total Problems Solved
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full md:w-auto">
+                <div className="border-2 border-white/20 p-4">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">LeetCode</div>
+                  <div className="text-2xl font-black leading-none">{clubStats.total_leetcode}</div>
+                </div>
+                <div className="border-2 border-white/20 p-4">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">GeeksForGeeks</div>
+                  <div className="text-2xl font-black leading-none">{clubStats.total_gfg}</div>
+                </div>
+                <div className="border-2 border-white/20 p-4">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">Codeforces</div>
+                  <div className="text-2xl font-black leading-none">{clubStats.total_codeforces}</div>
+                </div>
+                <div className="border-2 border-white/20 p-4">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">CodeChef</div>
+                  <div className="text-2xl font-black leading-none">{clubStats.total_codechef}</div>
+                </div>
+                <div className="border-2 border-white/20 p-4">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">HackerRank</div>
+                  <div className="text-2xl font-black leading-none">{clubStats.total_hackerrank_badges}</div>
+                  <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">Badges</div>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+        )}
 
         {/* ── Club Activity Calendar ── */}
         <ScrollReveal delay={0.08} className="mb-14">

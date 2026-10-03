@@ -281,6 +281,11 @@ export default function MemberProfile() {
     ? s.gfg_school + s.gfg_basic + s.gfg_easy + s.gfg_medium + s.gfg_hard
     : 0;
 
+  // Individual Total Solved across platforms
+  const individualTotalSolved = s
+    ? (s.leetcode_total || 0) + (s.codeforces_solved || 0) + (s.codechef_solved || 0) + (s.gfg_solved || 0)
+    : 0;
+
   // Safely extract numeric counts from topic_stats regardless of nesting depth.
   function toCount(val: unknown): number {
     if (typeof val === "number") return val;
@@ -436,7 +441,21 @@ export default function MemberProfile() {
             {/* ── HERO METRICS ── */}
             {s && (
               <StaggerItem>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <motion.div
+                    whileHover={{ x: -3, y: -3 }}
+                    transition={{ duration: 0.15 }}
+                    className="bg-[#0707f2] text-white border-4 border-slate-900 p-5 brutalist-shadow flex flex-col justify-between min-h-[110px]"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">
+                      Total Solved
+                    </span>
+                    <div className="flex items-end gap-1 mt-2">
+                      <span className="text-4xl font-black leading-none">
+                        {individualTotalSolved}
+                      </span>
+                    </div>
+                  </motion.div>
                   <MetricCard
                     label="Total Score"
                     value={Math.round(s.total_score)}

@@ -131,6 +131,55 @@ export async function getClubActivityMap(): Promise<ActivityDay[]> {
   }));
 }
 
+// ── Club Stats Summary ─────────────────────────────────────────────────────
+
+export interface ClubStatsSummary {
+  total_leetcode: number;
+  total_codeforces: number;
+  total_codechef: number;
+  total_gfg: number;
+  total_hackerrank_badges: number;
+  total_club_solved: number;
+}
+
+export async function getClubStatsSummary(): Promise<ClubStatsSummary> {
+  const defaultStats: ClubStatsSummary = {
+    total_leetcode: 0,
+    total_codeforces: 0,
+    total_codechef: 0,
+    total_gfg: 0,
+    total_hackerrank_badges: 0,
+    total_club_solved: 0,
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from("club_stats_summary")
+      .select("*")
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.error("[codexApi] getClubStatsSummary error:", error.message);
+      return defaultStats;
+    }
+
+    if (!data) return defaultStats;
+
+    return {
+      total_leetcode: data.total_leetcode || 0,
+      total_codeforces: data.total_codeforces || 0,
+      total_codechef: data.total_codechef || 0,
+      total_gfg: data.total_gfg || 0,
+      total_hackerrank_badges: data.total_hackerrank_badges || 0,
+      total_club_solved: data.total_club_solved || 0,
+    };
+  } catch (err) {
+    console.error("[codexApi] getClubStatsSummary error:", err);
+    return defaultStats;
+  }
+}
+
 // ── Member Profile ─────────────────────────────────────────────────────────
 
 export interface MemberProfile {
@@ -159,8 +208,10 @@ export interface MemberProfile {
     github_contributions: number;
     codeforces_rating: number;
     codeforces_max_rating: number;
+    codeforces_solved: number;
     codechef_rating: number;
     codechef_max_rating: number;
+    codechef_solved: number;
     leetcode_rating: number;
     leetcode_max_rating: number;
     gfg_solved: number;
@@ -202,8 +253,8 @@ export async function getMemberProfile(handle: string): Promise<MemberProfile | 
          leetcode_easy, leetcode_medium, leetcode_hard, leetcode_total,
          leetcode_rating, leetcode_max_rating,
          gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard, gfg_solved, gfg_score,
-         github_contributions, codeforces_rating, codeforces_max_rating,
-         codechef_rating, codechef_max_rating,
+         github_contributions, codeforces_rating, codeforces_max_rating, codeforces_solved,
+         codechef_rating, codechef_max_rating, codechef_solved,
          hackerrank_badges, contests_attended, topic_stats, badges_detail`
       )
       .eq("member_id", member.id)
