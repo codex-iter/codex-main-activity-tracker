@@ -472,30 +472,36 @@ export default function MemberProfile() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="border-4 border-slate-900 p-5 flex flex-col items-center justify-center text-center brutalist-shadow-sm hover:-translate-y-1 transition-transform bg-white">
                       <span className="text-sm font-black uppercase tracking-widest text-slate-500 mb-2">LeetCode</span>
-                      <span className="text-5xl font-black text-slate-900 leading-none">
-                        {s.leetcode_rating || 0}
+                      <span className={`font-black leading-none ${s.leetcode_rating ? 'text-6xl text-slate-900' : 'text-5xl text-slate-400'}`}>
+                        {s.leetcode_rating || "UNRATED"}
                       </span>
-                      <span className="text-xs font-bold uppercase text-slate-400 mt-2">
-                        (Max: {s.leetcode_max_rating || 0})
-                      </span>
+                      {s.leetcode_max_rating > 0 && (
+                        <span className="text-xs font-bold uppercase text-slate-500 mt-2">
+                          (max: {s.leetcode_max_rating})
+                        </span>
+                      )}
                     </div>
                     <div className="border-4 border-slate-900 p-5 flex flex-col items-center justify-center text-center brutalist-shadow-sm hover:-translate-y-1 transition-transform bg-white">
                       <span className="text-sm font-black uppercase tracking-widest text-slate-500 mb-2">CodeChef</span>
-                      <span className="text-5xl font-black text-slate-900 leading-none">
-                        {s.codechef_rating || 0}
+                      <span className={`font-black leading-none ${s.codechef_rating ? 'text-6xl text-slate-900' : 'text-5xl text-slate-400'}`}>
+                        {s.codechef_rating || "UNRATED"}
                       </span>
-                      <span className="text-xs font-bold uppercase text-slate-400 mt-2">
-                        (Max: {s.codechef_max_rating || 0})
-                      </span>
+                      {s.codechef_max_rating > 0 && (
+                        <span className="text-xs font-bold uppercase text-slate-500 mt-2">
+                          (max: {s.codechef_max_rating})
+                        </span>
+                      )}
                     </div>
                     <div className="border-4 border-slate-900 p-5 flex flex-col items-center justify-center text-center brutalist-shadow-sm hover:-translate-y-1 transition-transform bg-white">
                       <span className="text-sm font-black uppercase tracking-widest text-slate-500 mb-2">Codeforces</span>
-                      <span className="text-5xl font-black text-slate-900 leading-none">
-                        {s.codeforces_rating || 0}
+                      <span className={`font-black leading-none ${s.codeforces_rating ? 'text-6xl text-slate-900' : 'text-5xl text-slate-400'}`}>
+                        {s.codeforces_rating || "UNRATED"}
                       </span>
-                      <span className="text-xs font-bold uppercase text-slate-400 mt-2">
-                        (Max: {s.codeforces_max_rating || 0})
-                      </span>
+                      {s.codeforces_max_rating > 0 && (
+                        <span className="text-xs font-bold uppercase text-slate-500 mt-2">
+                          (max: {s.codeforces_max_rating})
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
