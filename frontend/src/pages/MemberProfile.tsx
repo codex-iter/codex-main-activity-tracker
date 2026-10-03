@@ -689,6 +689,91 @@ export default function MemberProfile() {
                       <PlatformPill platform="Contests" value={s.contests_attended ?? 0} />
                     </div>
                   </div>
+
+                  {/* ── PLATFORM VOLUME BREAKDOWN ── */}
+                  {(() => {
+                    const lc = s.leetcode_total || 0;
+                    const gfg = s.gfg_solved || 0;
+                    const cf = s.codeforces_solved || 0;
+                    const cc = s.codechef_solved || 0;
+                    const totalVol = lc + gfg + cf + cc;
+                    
+                    if (totalVol === 0) return null;
+                    
+                    return (
+                      <div className="mb-10">
+                        <h4 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-3">Solved Volume By Platform</h4>
+                        
+                        {/* Stacked Bar */}
+                        <div className="w-full flex h-12 md:h-16 border-4 border-slate-900 bg-slate-100 mb-4 brutalist-shadow-sm cursor-crosshair">
+                          {lc > 0 && (
+                            <div 
+                              className="bg-yellow-400 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110"
+                              style={{ width: `${(lc / totalVol) * 100}%` }}
+                              title={`LeetCode: ${lc}`}
+                            />
+                          )}
+                          {gfg > 0 && (
+                            <div 
+                              className="bg-green-500 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110"
+                              style={{ width: `${(gfg / totalVol) * 100}%` }}
+                              title={`GeeksForGeeks: ${gfg}`}
+                            />
+                          )}
+                          {cf > 0 && (
+                            <div 
+                              className="bg-red-500 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110"
+                              style={{ width: `${(cf / totalVol) * 100}%` }}
+                              title={`Codeforces: ${cf}`}
+                            />
+                          )}
+                          {cc > 0 && (
+                            <div 
+                              className="bg-purple-500 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110"
+                              style={{ width: `${(cc / totalVol) * 100}%` }}
+                              title={`CodeChef: ${cc}`}
+                            />
+                          )}
+                        </div>
+                        
+                        {/* Legend */}
+                        <div className="flex flex-wrap gap-3">
+                          {lc > 0 && (
+                            <div className="border-2 border-slate-900 bg-white px-3 py-1.5 flex items-center gap-2 brutalist-shadow-sm">
+                              <div className="w-3 h-3 bg-yellow-400 border-2 border-slate-900" />
+                              <span className="text-xs font-black uppercase tracking-widest text-slate-900">
+                                LeetCode: {lc} ({Math.round((lc / totalVol) * 100)}%)
+                              </span>
+                            </div>
+                          )}
+                          {gfg > 0 && (
+                            <div className="border-2 border-slate-900 bg-white px-3 py-1.5 flex items-center gap-2 brutalist-shadow-sm">
+                              <div className="w-3 h-3 bg-green-500 border-2 border-slate-900" />
+                              <span className="text-xs font-black uppercase tracking-widest text-slate-900">
+                                GFG: {gfg} ({Math.round((gfg / totalVol) * 100)}%)
+                              </span>
+                            </div>
+                          )}
+                          {cf > 0 && (
+                            <div className="border-2 border-slate-900 bg-white px-3 py-1.5 flex items-center gap-2 brutalist-shadow-sm">
+                              <div className="w-3 h-3 bg-red-500 border-2 border-slate-900" />
+                              <span className="text-xs font-black uppercase tracking-widest text-slate-900">
+                                Codeforces: {cf} ({Math.round((cf / totalVol) * 100)}%)
+                              </span>
+                            </div>
+                          )}
+                          {cc > 0 && (
+                            <div className="border-2 border-slate-900 bg-white px-3 py-1.5 flex items-center gap-2 brutalist-shadow-sm">
+                              <div className="w-3 h-3 bg-purple-500 border-2 border-slate-900" />
+                              <span className="text-xs font-black uppercase tracking-widest text-slate-900">
+                                CodeChef: {cc} ({Math.round((cc / totalVol) * 100)}%)
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                     <PlatformCard 
