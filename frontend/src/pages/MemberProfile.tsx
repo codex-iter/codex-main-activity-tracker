@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "../components/animations/ScrollReveal";
 import SEO from "../components/SEO";
 import { getMemberProfile, type MemberProfile } from "../services/codexApi";
-import GitHubCalendar from "react-github-calendar";
+import { GitHubCalendar } from "react-github-calendar";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
