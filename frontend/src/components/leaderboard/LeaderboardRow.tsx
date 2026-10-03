@@ -58,7 +58,7 @@ export default function LeaderboardRow({
       <div className="flex-shrink-0 w-12 h-12 border-4 border-slate-900 overflow-hidden bg-slate-200">
         <img
           src={avatar}
-          alt={member.full_name ?? "Member"}
+          alt={`${member.handle} avatar`}
           loading="lazy"
           className="w-full h-full object-cover"
           onError={(e) => {

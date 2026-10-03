@@ -17,7 +17,7 @@ export function AchievementsAndBadges({ badges }: { badges: Array<{ platform: st
             {badges.map((badge, idx) => (
               <div key={`${badge.platform}-${badge.id}-${idx}`} className="border-4 border-slate-900 bg-white p-4 flex flex-col items-center justify-center text-center brutalist-shadow-sm hover:-translate-y-1 transition-transform group">
                 {badge.icon ? (
-                  <img src={badge.icon} alt={badge.name} className="w-16 h-16 object-contain mb-3 group-hover:scale-110 transition-transform" />
+                  <img src={badge.icon} alt={badge.name} loading="lazy" className="w-16 h-16 object-contain mb-3 group-hover:scale-110 transition-transform" />
                 ) : (
                   <div className="w-16 h-16 bg-slate-100 border-2 border-slate-900 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <span className="material-symbols-outlined text-3xl text-slate-400">workspace_premium</span>

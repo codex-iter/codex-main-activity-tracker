@@ -25,7 +25,8 @@ export function ProfileHeader({ profile }: { profile: MemberProfile }) {
         <div className="flex-shrink-0 w-24 h-24 border-4 border-white overflow-hidden bg-slate-700">
           <img
             src={avatar(profile)}
-            alt={profile.full_name}
+            alt={`${profile.full_name} avatar`}
+            loading="lazy"
             className="w-full h-full object-cover"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src =
