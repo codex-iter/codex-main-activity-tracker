@@ -135,32 +135,30 @@ export async function getClubActivityMap(): Promise<ActivityDay[]> {
 
 export async function getClubGithubHeatmap(): Promise<ActivityDay[]> {
   const { data, error } = await supabase
-    .from("activity_snapshots")
-    .select("snapshot_date, daily_github_delta")
-    .not("daily_github_delta", "is", null);
+    .from("club_github_history")
+    .select("date, commits")
+    .order("date", { ascending: true });
 
   if (error) {
     console.error("[codexApi] getClubGithubHeatmap error:", error.message);
     throw new Error(error.message);
   }
 
-  const dateMap: Record<string, number> = {};
-  for (const row of (data || [])) {
-    const dStr = row.snapshot_date.split("T")[0]; // ensure format YYYY-MM-DD
-    dateMap[dStr] = (dateMap[dStr] || 0) + (row.daily_github_delta || 0);
-  }
-
-  // Convert to sorted array
-  const rows = Object.entries(dateMap)
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  const max = Math.max(0, ...rows.map((r) => r.count));
+  const rows = (data ?? []) as { date: string; commits: number }[];
+  
+  // Custom level scaling based on collective club volume
+  const getLevel = (commits: number) => {
+    if (commits === 0) return 0;
+    if (commits <= 10) return 1;
+    if (commits <= 30) return 2;
+    if (commits <= 60) return 3;
+    return 4; // 61+ commits in a single day
+  };
 
   return rows.map((r) => ({
     date: r.date,
-    count: r.count,
-    level: countToLevel(r.count, max),
+    count: r.commits,
+    level: getLevel(r.commits),
   }));
 }
 
