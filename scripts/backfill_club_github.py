@@ -1,8 +1,9 @@
 import os
+import re
 import requests
 from dotenv import load_dotenv
 from supabase import create_client, Client
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # Load environment variables from frontend/.env.local
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -17,6 +18,47 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+def fetch_github_native_contributions(handle):
+    url = f"https://github.com/users/{handle}/contributions"
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        )
+    }
+    date_counts = {}
+    try:
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code != 200:
+            print(f"Failed native fetch for {handle}: {res.status_code}")
+            return {}
+        
+        html = res.text
+        td_pattern = re.compile(r'<td[^>]*class="[^"]*ContributionCalendar-day[^"]*"[^>]*>')
+        tds = td_pattern.findall(html)
+        
+        for td in tds:
+            id_match = re.search(r'id="([^"]+)"', td)
+            date_match = re.search(r'data-date="([^"]+)"', td)
+            if id_match and date_match:
+                id_val = id_match.group(1)
+                c_date = date_match.group(1)
+                tt_pattern = re.compile(r'<tool-tip[^>]*for="' + re.escape(id_val) + r'"[^>]*>(.*?)</tool-tip>', re.IGNORECASE | re.DOTALL)
+                tt_match = tt_pattern.search(html)
+                if tt_match:
+                    tt_text = tt_match.group(1).strip()
+                    if tt_text.lower().startswith("no"):
+                        count = 0
+                    else:
+                        m = re.match(r"^(\d+)", tt_text)
+                        count = int(m.group(1)) if m else 0
+                    date_counts[c_date] = count
+    except Exception as e:
+        print(f"Error fetching native github for {handle}: {e}")
+        
+    return date_counts
+
 def backfill():
     # 1. Fetch active members with github handles
     response = supabase.table("members").select("github_handle").eq("is_active", True).execute()
@@ -27,29 +69,18 @@ def backfill():
     
     # 2. Setup dictionary to aggregate counts
     # Pre-fill last 365 days with 0
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     date_map = {}
     for i in range(365):
         d = today - timedelta(days=i)
         date_map[d.isoformat()] = 0
         
-    # 3. Fetch from github contributions proxy
+    # 3. Fetch natively from Github
     for handle in handles:
-        try:
-            res = requests.get(f"https://github-contributions.vercel.app/api/v1/{handle}", timeout=10)
-            if res.status_code == 200:
-                data = res.json()
-                # The proxy returns {'contributions': [{'date': 'YYYY-MM-DD', 'count': N}, ...]}
-                contributions = data.get("contributions", [])
-                for c in contributions:
-                    c_date = c.get("date")
-                    c_count = c.get("count", 0)
-                    if c_date in date_map:
-                        date_map[c_date] += c_count
-            else:
-                print(f"Failed to fetch for {handle}: {res.status_code}")
-        except Exception as e:
-            print(f"Error fetching for {handle}: {e}")
+        counts = fetch_github_native_contributions(handle)
+        for c_date, c_count in counts.items():
+            if c_date in date_map:
+                date_map[c_date] += c_count
             
     # 4. Prepare bulk upsert
     upsert_data = [{"date": d, "commits": c} for d, c in date_map.items()]
