@@ -131,6 +131,39 @@ export async function getClubActivityMap(): Promise<ActivityDay[]> {
   }));
 }
 
+// ── Club GitHub Heatmap ───────────────────────────────────────────────────
+
+export async function getClubGithubHeatmap(): Promise<ActivityDay[]> {
+  const { data, error } = await supabase
+    .from("activity_snapshots")
+    .select("snapshot_date, daily_github_delta")
+    .not("daily_github_delta", "is", null);
+
+  if (error) {
+    console.error("[codexApi] getClubGithubHeatmap error:", error.message);
+    throw new Error(error.message);
+  }
+
+  const dateMap: Record<string, number> = {};
+  for (const row of (data || [])) {
+    const dStr = row.snapshot_date.split("T")[0]; // ensure format YYYY-MM-DD
+    dateMap[dStr] = (dateMap[dStr] || 0) + (row.daily_github_delta || 0);
+  }
+
+  // Convert to sorted array
+  const rows = Object.entries(dateMap)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const max = Math.max(0, ...rows.map((r) => r.count));
+
+  return rows.map((r) => ({
+    date: r.date,
+    count: r.count,
+    level: countToLevel(r.count, max),
+  }));
+}
+
 // ── Club Stats Summary ─────────────────────────────────────────────────────
 
 export interface ClubStatsSummary {

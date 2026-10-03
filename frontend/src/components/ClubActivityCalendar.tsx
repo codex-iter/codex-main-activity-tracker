@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ActivityCalendar, type ThemeInput } from "react-activity-calendar";
-import { getClubActivityMap, type ActivityDay } from "../services/codexApi";
+import { getClubActivityMap, getClubGithubHeatmap, type ActivityDay } from "../services/codexApi";
 
 // ── Theme ─────────────────────────────────────────────────────────────────
 // Matches the CODEX design palette: #CAF0F8 background, #0707f2 primary
@@ -8,6 +8,11 @@ import { getClubActivityMap, type ActivityDay } from "../services/codexApi";
 const CODEX_THEME: ThemeInput = {
   light: ["#e2f0fb", "#90d4f0", "#48b4e0", "#0a7bbf", "#0707f2"],
   dark:  ["#1a1a2e", "#1a3a6e", "#0d5ea6", "#0a7bbf", "#0707f2"],
+};
+
+const GITHUB_THEME: ThemeInput = {
+  light: ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"],
+  dark:  ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"],
 };
 
 // ── Skeleton ──────────────────────────────────────────────────────────────
@@ -55,9 +60,10 @@ function CalendarEmpty() {
 
 export default function ClubActivityCalendar() {
   const [days, setDays] = useState<ActivityDay[]>([]);
+  const [ghDays, setGhDays] = useState<ActivityDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; activity: ActivityDay } | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; activity: ActivityDay; label: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,8 +72,14 @@ export default function ClubActivityCalendar() {
       try {
         setLoading(true);
         setError(null);
-        const data = await getClubActivityMap();
-        if (!cancelled) setDays(data);
+        const [data, ghData] = await Promise.all([
+          getClubActivityMap(),
+          getClubGithubHeatmap()
+        ]);
+        if (!cancelled) {
+          setDays(data);
+          setGhDays(ghData);
+        }
       } catch (err: unknown) {
         if (!cancelled)
           setError(err instanceof Error ? err.message : "Unknown error");
@@ -130,40 +142,86 @@ export default function ClubActivityCalendar() {
         {!loading && !error && days.length === 0 && <CalendarEmpty />}
 
         {!loading && !error && days.length > 0 && (
-          <>
-            <ActivityCalendar
-              data={days}
-              theme={CODEX_THEME}
-              colorScheme="dark"
-              blockSize={14}
-              blockMargin={4}
-              blockRadius={2}
-              fontSize={12}
-              labels={{
-                legend: { less: "Less", more: "More" },
-                totalCount: "{{count}} actions in {{year}}",
-              }}
-              style={{
-                color: "#94a3b8", // slate-400 for month/day labels
-                fontFamily: "'Space Grotesk', sans-serif",
-              }}
-              showWeekdayLabels
-              renderBlock={(block, activity) =>
-                React.cloneElement(block as React.ReactElement, {
-                  onMouseEnter: (e: React.MouseEvent) => {
-                    const rect = (e.target as Element).getBoundingClientRect();
-                    setTooltip({
-                      x: rect.left + rect.width / 2,
-                      y: rect.top,
-                      activity,
-                    });
-                  },
-                  onMouseLeave: () => setTooltip(null),
-                  className: "transition-all duration-150 hover:scale-150 hover:-translate-y-1 hover:z-20 cursor-crosshair",
-                  style: { transformBox: 'fill-box', transformOrigin: 'center' }
-                })
-              }
-            />
+          <div className="flex flex-col gap-10">
+            <div>
+              <h3 className="text-xl font-black uppercase text-white mb-4 tracking-tight border-l-4 border-primary pl-3">
+                Problem Solving
+              </h3>
+              <ActivityCalendar
+                data={days}
+                theme={CODEX_THEME}
+                colorScheme="dark"
+                blockSize={14}
+                blockMargin={4}
+                blockRadius={2}
+                fontSize={12}
+                labels={{
+                  legend: { less: "Less", more: "More" },
+                  totalCount: "{{count}} problems in {{year}}",
+                }}
+                style={{
+                  color: "#94a3b8",
+                  fontFamily: "'Space Grotesk', sans-serif",
+                }}
+                showWeekdayLabels
+                renderBlock={(block, activity) =>
+                  React.cloneElement(block as React.ReactElement, {
+                    onMouseEnter: (e: React.MouseEvent) => {
+                      const rect = (e.target as Element).getBoundingClientRect();
+                      setTooltip({
+                        x: rect.left + rect.width / 2,
+                        y: rect.top,
+                        activity,
+                        label: "PROBLEMS"
+                      });
+                    },
+                    onMouseLeave: () => setTooltip(null),
+                    className: "transition-all duration-150 hover:scale-150 hover:-translate-y-1 hover:z-20 cursor-crosshair",
+                    style: { transformBox: 'fill-box', transformOrigin: 'center' }
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <h3 className="text-xl font-black uppercase text-white mb-4 tracking-tight border-l-4 border-[#39d353] pl-3">
+                Club GitHub Commits
+              </h3>
+              <ActivityCalendar
+                data={ghDays.length > 0 ? ghDays : [{ date: new Date().toISOString().split('T')[0], count: 0, level: 0 }]}
+                theme={GITHUB_THEME}
+                colorScheme="dark"
+                blockSize={14}
+                blockMargin={4}
+                blockRadius={2}
+                fontSize={12}
+                labels={{
+                  legend: { less: "Less", more: "More" },
+                  totalCount: "{{count}} commits in {{year}}",
+                }}
+                style={{
+                  color: "#94a3b8",
+                  fontFamily: "'Space Grotesk', sans-serif",
+                }}
+                showWeekdayLabels
+                renderBlock={(block, activity) =>
+                  React.cloneElement(block as React.ReactElement, {
+                    onMouseEnter: (e: React.MouseEvent) => {
+                      const rect = (e.target as Element).getBoundingClientRect();
+                      setTooltip({
+                        x: rect.left + rect.width / 2,
+                        y: rect.top,
+                        activity,
+                        label: "COMMITS"
+                      });
+                    },
+                    onMouseLeave: () => setTooltip(null),
+                    className: "transition-all duration-150 hover:scale-150 hover:-translate-y-1 hover:z-20 cursor-crosshair",
+                    style: { transformBox: 'fill-box', transformOrigin: 'center' }
+                  })
+                }
+              />
+            </div>
 
             {/* Tooltip Portal */}
             {tooltip && (
@@ -176,12 +234,12 @@ export default function ClubActivityCalendar() {
                     {new Date(tooltip.activity.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}
                   </span>
                   <span className="font-bold">
-                    {tooltip.activity.count} PROBLEMS
+                    {tooltip.activity.count} {tooltip.label}
                   </span>
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 

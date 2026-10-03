@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import React from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ScrollReveal, StaggerContainer, StaggerItem } from "../components/animations/ScrollReveal";
 import SEO from "../components/SEO";
 import { getMemberProfile, type MemberProfile } from "../services/codexApi";
+import GitHubCalendar from "react-github-calendar";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -258,6 +260,7 @@ export default function MemberProfile() {
     undefined // undefined = loading, null = not found
   );
   const [error, setError] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; activity: any } | null>(null);
 
   useEffect(() => {
     if (!handle) return;
@@ -689,6 +692,67 @@ export default function MemberProfile() {
                       <PlatformPill platform="Contests" value={s.contests_attended ?? 0} />
                     </div>
                   </div>
+
+                  {/* ── OPEN SOURCE CONTRIBUTIONS ── */}
+                  <div className="mb-10">
+                    <div className="mb-6">
+                      <Label>Open Source</Label>
+                      <SectionTitle>Contributions</SectionTitle>
+                    </div>
+                    {profile.github_handle ? (
+                      <div className="border-4 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-6 md:p-8 overflow-x-auto bg-white flex justify-center w-full min-w-0">
+                        <GitHubCalendar 
+                          username={profile.github_handle} 
+                          colorScheme="light"
+                          theme={{
+                            light: ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"] // classic github green
+                          }}
+                          style={{
+                            fontFamily: "'Space Grotesk', sans-serif",
+                            width: "100%",
+                          }}
+                          renderBlock={(block, activity) =>
+                            React.cloneElement(block as React.ReactElement, {
+                              onMouseEnter: (e: React.MouseEvent) => {
+                                const rect = (e.target as Element).getBoundingClientRect();
+                                setTooltip({
+                                  x: rect.left + rect.width / 2,
+                                  y: rect.top,
+                                  activity: activity,
+                                });
+                              },
+                              onMouseLeave: () => setTooltip(null),
+                              className: "transition-all duration-150 hover:scale-150 hover:-translate-y-1 hover:z-20 cursor-crosshair",
+                              style: { transformBox: 'fill-box', transformOrigin: 'center' }
+                            })
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <div className="border-4 border-slate-900 border-dashed p-6 text-center shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]">
+                        <span className="text-sm font-black uppercase tracking-widest text-slate-400">
+                          NO GITHUB HANDLE LINKED
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Tooltip Portal */}
+                  {tooltip && (
+                    <div
+                      className="fixed z-[100] pointer-events-none -translate-x-1/2 -translate-y-[120%]"
+                      style={{ left: tooltip.x, top: tooltip.y }}
+                    >
+                      <div className="bg-slate-900 text-white font-mono uppercase text-xs tracking-wider border-2 border-black rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] px-3 py-2 z-50 flex flex-col items-center text-center whitespace-nowrap">
+                        <span className="border-b-2 border-slate-700 pb-1 mb-1 w-full text-slate-400">
+                          {new Date(tooltip.activity.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}
+                        </span>
+                        <span className="font-bold">
+                          {tooltip.activity.count} PROBLEMS
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* ── PLATFORM VOLUME BREAKDOWN ── */}
                   {(() => {
