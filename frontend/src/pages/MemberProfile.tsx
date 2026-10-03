@@ -345,7 +345,7 @@ export default function MemberProfile() {
   }
 
   const sortedTopics = aggregateTopics(s?.topic_stats);
-  const badges = (s?.badges_detail as Array<{ platform: string; name: string }>) || [];
+  const badges = (s?.badges_detail as Array<{ platform: string; id: string; name: string; icon?: string }>) || [];
 
   return (
     <div className="bg-background-light min-h-screen font-display text-slate-900">
@@ -590,6 +590,10 @@ export default function MemberProfile() {
                           (max: {s.leetcode_max_rating})
                         </span>
                       )}
+                      <div className="mt-4 pt-3 border-t-2 border-slate-200 w-full">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Contests Fought</span>
+                        <span className="text-xl font-black text-slate-900 leading-none">{s.leetcode_contests || 0}</span>
+                      </div>
                     </div>
                     <div className="border-4 border-slate-900 p-5 flex flex-col items-center justify-center text-center brutalist-shadow-sm hover:-translate-y-1 transition-transform bg-white">
                       <span className="text-sm font-black uppercase tracking-widest text-slate-500 mb-2">CodeChef</span>
@@ -601,6 +605,10 @@ export default function MemberProfile() {
                           (max: {s.codechef_max_rating})
                         </span>
                       )}
+                      <div className="mt-4 pt-3 border-t-2 border-slate-200 w-full">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Contests Fought</span>
+                        <span className="text-xl font-black text-slate-900 leading-none">{s.codechef_contests || 0}</span>
+                      </div>
                     </div>
                     <div className="border-4 border-slate-900 p-5 flex flex-col items-center justify-center text-center brutalist-shadow-sm hover:-translate-y-1 transition-transform bg-white">
                       <span className="text-sm font-black uppercase tracking-widest text-slate-500 mb-2">Codeforces</span>
@@ -612,6 +620,10 @@ export default function MemberProfile() {
                           (max: {s.codeforces_max_rating})
                         </span>
                       )}
+                      <div className="mt-4 pt-3 border-t-2 border-slate-200 w-full">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Contests Fought</span>
+                        <span className="text-xl font-black text-slate-900 leading-none">{s.codeforces_contests || 0}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -675,6 +687,48 @@ export default function MemberProfile() {
                       </div>
                     )}
                   </div>
+                </div>
+              </StaggerItem>
+            )}
+
+            {/* ── ACHIEVEMENTS & BADGES ── */}
+            {s && (
+              <StaggerItem>
+                <div className="border-4 border-slate-900 bg-white p-6 md:p-8 brutalist-shadow">
+                  <div className="mb-6 flex justify-between items-end gap-4 flex-wrap">
+                    <div>
+                      <Label>Rewards</Label>
+                      <SectionTitle>Achievements & Badges</SectionTitle>
+                    </div>
+                  </div>
+                  {badges.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {badges.map((badge, idx) => (
+                        <div key={`${badge.platform}-${badge.id}-${idx}`} className="border-4 border-slate-900 bg-white p-4 flex flex-col items-center justify-center text-center brutalist-shadow-sm hover:-translate-y-1 transition-transform group">
+                          {badge.icon ? (
+                            <img src={badge.icon} alt={badge.name} className="w-16 h-16 object-contain mb-3 group-hover:scale-110 transition-transform" />
+                          ) : (
+                            <div className="w-16 h-16 bg-slate-100 border-2 border-slate-900 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                              <span className="material-symbols-outlined text-3xl text-slate-400">workspace_premium</span>
+                            </div>
+                          )}
+                          <span className="text-xs font-black uppercase tracking-tight text-slate-900 leading-tight">
+                            {badge.name}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase mt-1">
+                            {badge.platform}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="border-4 border-slate-900 border-dashed p-8 text-center bg-slate-50">
+                      <span className="material-symbols-outlined text-4xl text-slate-300 mb-2 block">military_tech</span>
+                      <span className="text-sm font-black uppercase tracking-widest text-slate-400">
+                        No Badges Earned Yet
+                      </span>
+                    </div>
+                  )}
                 </div>
               </StaggerItem>
             )}

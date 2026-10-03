@@ -55,6 +55,7 @@ HackerRank GET /{handle}/stats       -> { data: { topicAnalysis: [{topic, count}
 import asyncio
 import logging
 import os
+import re
 from datetime import datetime, timezone
 
 import aiohttp
@@ -283,10 +284,22 @@ async def fetch_leetcode(session: aiohttp.ClientSession, handle: str) -> dict:
     """
     BASE = "https://leetcode-api-pied.vercel.app"
 
-    solved_data, summary, contest_data = await asyncio.gather(
+    query = """
+    query userBadges($username: String!) {
+        matchedUser(username: $username) {
+            badges {
+                name
+                icon
+            }
+        }
+    }
+    """
+
+    solved_data, summary, contest_data, badges_resp = await asyncio.gather(
         safe_fetch(session, f"{BASE}/user/{handle}/solved"),
         safe_fetch(session, f"{BASE}/user/{handle}"),
         safe_fetch(session, f"{BASE}/user/{handle}/contests"),
+        safe_fetch(session, "https://leetcode.com/graphql", method="POST", json_body={"query": query, "variables": {"username": handle}})
     )
 
     # 1. Total solved
@@ -335,6 +348,18 @@ async def fetch_leetcode(session: aiohttp.ClientSession, handle: str) -> dict:
     except Exception as exc:
         log.warning("    LeetCode contests unavailable for %s: %s", handle, exc)
 
+    lc_badges_list = []
+    try:
+        user_data = badges_resp.get("data", {}).get("matchedUser", {}) or {}
+        badges = user_data.get("badges") or []
+        for b in badges:
+            icon = b.get("icon")
+            if icon and icon.startswith("/"):
+                icon = "https://leetcode.com" + icon
+            lc_badges_list.append({"name": b.get("name"), "icon": icon})
+    except Exception as exc:
+        log.warning("    LeetCode badges unavailable for %s: %s", handle, exc)
+
     result = {
         "leetcode_easy": easy,
         "leetcode_medium": medium,
@@ -345,6 +370,7 @@ async def fetch_leetcode(session: aiohttp.ClientSession, handle: str) -> dict:
         "lc_contests_attended": lc_contests,
         "lc_badge_name": lc_badge,
         "_lc_summary": summary,   # kept for topic aggregation in build_topic_stats
+        "_lc_badges_list": lc_badges_list,
     }
     log.info("    ✓ LeetCode     -> easy=%d med=%d hard=%d total=%d contests=%d",
              easy, medium, hard, total, lc_contests)
@@ -570,6 +596,24 @@ async def fetch_hackerrank(session: aiohttp.ClientSession, handle: str) -> dict:
 # Snapshot Assembly: JSONB Aggregation
 # ---------------------------------------------------------------------------
 
+def sanitize_topic_map(topics: dict) -> dict:
+    sanitized = {}
+    ignore_pattern = re.compile(r"start\d+|_adm$|admin|cakewalk|simple", re.IGNORECASE)
+    
+    aliases = {
+        "two-pointer-algorithm": "Two Pointers",
+        "two pointers": "Two Pointers",
+        "sieve": "Math",
+    }
+    
+    for k, v in topics.items():
+        if ignore_pattern.search(k):
+            continue
+        clean_k = aliases.get(k.lower(), k.replace("-", " ").title())
+        sanitized[clean_k] = sanitized.get(clean_k, 0) + v
+        
+    return sanitized
+
 def build_topic_stats(lc_summary: dict, cc_topics: dict, gfg_topics: dict, hr_topics: dict) -> dict:
     """
     Aggregates topic/tag data from all platforms into a single JSONB dict.
@@ -589,20 +633,22 @@ def build_topic_stats(lc_summary: dict, cc_topics: dict, gfg_topics: dict, hr_to
         pass
 
     return {
-        "leetcode": lc_topics,
-        "codechef": cc_topics,
-        "gfg": gfg_topics,
-        "hackerrank": hr_topics,
+        "leetcode": sanitize_topic_map(lc_topics),
+        "codechef": sanitize_topic_map(cc_topics),
+        "gfg": sanitize_topic_map(gfg_topics),
+        "hackerrank": sanitize_topic_map(hr_topics),
     }
 
 
-def build_badges_detail(lc_badge_name: str, hr_badges_list: list) -> list:
+def build_badges_detail(lc_badges_list: list, lc_badge_name: str, hr_badges_list: list) -> list:
     """
     Combines badge data from all platforms into a JSONB-compatible list of dicts.
-    Each badge: { platform, id, name }
+    Each badge: { platform, id, name, icon }
     """
     badges = []
-    if lc_badge_name:
+    for b in lc_badges_list:
+        badges.append({"platform": "leetcode", "id": b.get("name", ""), "name": b.get("name", ""), "icon": b.get("icon")})
+    if lc_badge_name and not any(b.get("name") == lc_badge_name for b in badges):
         badges.append({"platform": "leetcode", "id": "lc_badge", "name": lc_badge_name})
     for b in hr_badges_list:
         badges.append({"platform": "hackerrank", "id": b.get("id", ""), "name": b.get("name", "")})
@@ -751,6 +797,9 @@ async def sync_member_async(
 
         # Contest Metrics & Peak Ratings
         "contests_attended": 0,
+        "leetcode_contests": 0,
+        "codeforces_contests": 0,
+        "codechef_contests": 0,
         "leetcode_max_rating": 0,
         "codechef_max_rating": 0,
         "codeforces_max_rating": 0,
@@ -792,8 +841,8 @@ async def sync_member_async(
         gh_coro, cf_coro, lc_coro, cc_coro, gfg_coro, hr_coro,
         return_exceptions=False,
     )
-
     # Intermediate aggregation helpers
+    _lc_badges_list: list = []
     _lc_badge_name  = ""
     _hr_badges_list: list = []
     _cc_topics: dict = {}
@@ -818,6 +867,7 @@ async def sync_member_async(
         snapshot["codeforces_rank_title"] = cf_data.get("codeforces_rank_title", "Unrated")
         snapshot["codeforces_solved"]     = cf_data.get("codeforces_solved", 0)
         _cf_contests                      = cf_data.get("cf_contests_attended", 0)
+        snapshot["codeforces_contests"]   = _cf_contests
 
     # ── LeetCode ────────────────────────────────────────────────────────────
     if lc_handle and lc_data:
@@ -828,7 +878,9 @@ async def sync_member_async(
         snapshot["leetcode_rating"]      = lc_data.get("leetcode_rating", 0)
         snapshot["leetcode_max_rating"]  = lc_data.get("leetcode_max_rating", 0)
         _lc_contests                     = lc_data.get("lc_contests_attended", 0)
+        snapshot["leetcode_contests"]    = _lc_contests
         _lc_badge_name                   = lc_data.get("lc_badge_name", "")
+        _lc_badges_list                  = lc_data.get("_lc_badges_list", [])
         _lc_summary                      = lc_data.get("_lc_summary", {})
 
     # ── CodeChef ────────────────────────────────────────────────────────────
@@ -838,6 +890,7 @@ async def sync_member_async(
         snapshot["codechef_solved"]     = cc_data.get("codechef_solved", 0)
         _cc_topics                      = cc_data.get("cc_topics", {})
         _cc_contests                    = cc_data.get("cc_contests_attended", 0)
+        snapshot["codechef_contests"]   = _cc_contests
         # Accumulate streak & active days into cross-platform fields
         snapshot["active_days"]        += cc_data.get("cc_active_days", 0)
         snapshot["total_submissions"]  += cc_data.get("cc_total_submissions", 0)
@@ -875,7 +928,7 @@ async def sync_member_async(
     snapshot["topic_stats"] = build_topic_stats(
         _lc_summary, _cc_topics, _gfg_topics, _hr_topics
     )
-    snapshot["badges_detail"] = build_badges_detail(_lc_badge_name, _hr_badges_list)
+    snapshot["badges_detail"] = build_badges_detail(_lc_badges_list, _lc_badge_name, _hr_badges_list)
 
     # ── Compute Score ────────────────────────────────────────────────────────
     snapshot["total_score"] = calculate_score(snapshot)

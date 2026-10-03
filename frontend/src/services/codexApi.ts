@@ -174,6 +174,7 @@ export interface ClubStatsSummary {
   total_fundamentals: number;
   total_dsa: number;
   total_cp: number;
+  total_club_contests: number;
 }
 
 export async function getClubStatsSummary(): Promise<ClubStatsSummary> {
@@ -187,6 +188,7 @@ export async function getClubStatsSummary(): Promise<ClubStatsSummary> {
     total_fundamentals: 0,
     total_dsa: 0,
     total_cp: 0,
+    total_club_contests: 0,
   };
 
   try {
@@ -213,6 +215,7 @@ export async function getClubStatsSummary(): Promise<ClubStatsSummary> {
       total_fundamentals: data.total_fundamentals || 0,
       total_dsa: data.total_dsa || 0,
       total_cp: data.total_cp || 0,
+      total_club_contests: data.total_club_contests || 0,
     };
   } catch (err) {
     console.error("[codexApi] getClubStatsSummary error:", err);
@@ -265,6 +268,9 @@ export interface MemberProfile {
     gfg_score: number;
     hackerrank_badges: number;
     contests_attended: number;
+    leetcode_contests: number;
+    codeforces_contests: number;
+    codechef_contests: number;
     topic_stats: Record<string, number> | null;
     badges_detail: Record<string, unknown> | null;
   } | null;
@@ -302,7 +308,7 @@ export async function getMemberProfile(handle: string): Promise<MemberProfile | 
          gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard, gfg_solved, gfg_score,
          github_contributions, codeforces_rating, codeforces_max_rating, codeforces_solved,
          codechef_rating, codechef_max_rating, codechef_solved,
-         hackerrank_badges, contests_attended, topic_stats, badges_detail`
+         hackerrank_badges, contests_attended, leetcode_contests, codeforces_contests, codechef_contests, topic_stats, badges_detail`
       )
       .eq("member_id", member.id)
       .order("snapshot_date", { ascending: false })

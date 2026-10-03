@@ -260,7 +260,12 @@ export default function Leaderboard() {
                     Total Problems Solved
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full md:w-auto">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 w-full md:w-auto">
+                  <div className="border-2 border-white/20 p-4">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">Contests</div>
+                    <div className="text-2xl font-black leading-none">{clubStats.total_club_contests}</div>
+                    <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">Fought</div>
+                  </div>
                   <div className="border-2 border-white/20 p-4">
                     <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-1">LeetCode</div>
                     <div className="text-2xl font-black leading-none">{clubStats.total_leetcode}</div>
