@@ -248,28 +248,47 @@ export default function MemberProfile() {
     : 0;
 
   // Safely extract numeric counts from topic_stats regardless of nesting depth.
-  // Supabase JSONB can return values as plain numbers OR nested objects.
   function toCount(val: unknown): number {
     if (typeof val === "number") return val;
     if (val && typeof val === "object") {
-      // Try common numeric keys like { count, total, solved, value }
       const obj = val as Record<string, unknown>;
       for (const key of ["count", "total", "solved", "value", "problems"]) {
         if (typeof obj[key] === "number") return obj[key] as number;
       }
-      // Last resort: sum all numeric values in the object
       const nums = Object.values(obj).filter((v) => typeof v === "number") as number[];
       if (nums.length > 0) return nums.reduce((a, b) => a + b, 0);
     }
     return 0;
   }
 
-  const rawTopics = (s?.topic_stats ?? {}) as Record<string, unknown>;
-  const sortedTopics = Object.entries(rawTopics)
-    .map(([topic, val]) => [topic, toCount(val)] as [string, number])
-    .filter(([, count]) => count > 0)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 20);
+  function aggregateTopics(stats: unknown): [string, number][] {
+    if (!stats || typeof stats !== "object") return [];
+    const counts = new Map<string, number>();
+    
+    // stats is grouped by platform: { "gfg": { "Arrays": 15 }, "codechef": { "arrays": 5 } }
+    for (const platformData of Object.values(stats as Record<string, unknown>)) {
+      if (platformData && typeof platformData === "object") {
+        for (const [rawTopic, val] of Object.entries(platformData as Record<string, unknown>)) {
+          const count = toCount(val);
+          if (count > 0) {
+            const normalized = rawTopic
+              .replace(/[-_]/g, " ")
+              .split(" ")
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(" ")
+              .trim();
+            counts.set(normalized, (counts.get(normalized) || 0) + count);
+          }
+        }
+      }
+    }
+    return Array.from(counts.entries())
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 20); // Top 20 topics
+  }
+
+  const sortedTopics = aggregateTopics(s?.topic_stats);
+  const badges = (s?.badges_detail as Array<{ platform: string; name: string }>) || [];
 
   return (
     <div className="bg-background-light min-h-screen font-display text-slate-900">
@@ -502,6 +521,38 @@ export default function MemberProfile() {
                       <TopicTag key={topic} topic={topic} count={count} />
                     ))}
                   </div>
+                </div>
+              </StaggerItem>
+            )}
+
+            {/* ── EARNED BADGES ── */}
+            {s && (
+              <StaggerItem>
+                <div className="border-4 border-slate-900 bg-white p-6 md:p-8 brutalist-shadow">
+                  <div className="mb-6">
+                    <Label>Achievements</Label>
+                    <SectionTitle>Earned Badges</SectionTitle>
+                  </div>
+                  {badges.length > 0 ? (
+                    <div className="flex flex-wrap gap-4">
+                      {badges.map((badge, idx) => (
+                        <div key={idx} className="border-2 border-slate-900 px-4 py-2 flex flex-col justify-center bg-slate-100 brutalist-shadow-sm">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            {badge.platform}
+                          </span>
+                          <span className="text-sm font-black uppercase tracking-tighter text-slate-900">
+                            {badge.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="border-2 border-slate-300 border-dashed p-6 text-center">
+                      <span className="text-sm font-black uppercase tracking-widest text-slate-400">
+                        NO BADGES EARNED YET
+                      </span>
+                    </div>
+                  )}
                 </div>
               </StaggerItem>
             )}
