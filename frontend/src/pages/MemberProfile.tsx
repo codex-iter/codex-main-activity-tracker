@@ -137,14 +137,23 @@ function PlatformPill({
 function PlatformCard({
   platform,
   children,
+  href,
 }: {
   platform: string;
   children: React.ReactNode;
+  href?: string | null;
 }) {
   return (
     <div className="border-4 border-slate-900 bg-white p-5 flex flex-col brutalist-shadow-sm hover:-translate-y-1 hover:-translate-x-1 transition-transform">
       <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 border-b-4 border-slate-900 pb-2 mb-4">
-        {platform}
+        {href ? (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-primary inline-flex items-center gap-1 group">
+            {platform}
+            <span className="text-base font-normal transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5">↗</span>
+          </a>
+        ) : (
+          platform
+        )}
       </h3>
       <div className="flex-1 flex flex-col gap-3 justify-center">
         {children}
@@ -286,6 +295,12 @@ export default function MemberProfile() {
     ? (s.leetcode_total || 0) + (s.codeforces_solved || 0) + (s.codechef_solved || 0) + (s.gfg_solved || 0)
     : 0;
 
+  // Skill Distribution Categories
+  const skillFundamentals = s ? (s.gfg_school || 0) + (s.gfg_basic || 0) + (s.gfg_easy || 0) : 0;
+  const skillDsa = s ? (s.leetcode_easy || 0) + (s.leetcode_medium || 0) + (s.gfg_medium || 0) + (s.gfg_hard || 0) : 0;
+  const skillCp = s ? (s.codeforces_solved || 0) + (s.codechef_solved || 0) + (s.leetcode_hard || 0) : 0;
+  const totalSkill = skillFundamentals + skillDsa + skillCp;
+
   // Safely extract numeric counts from topic_stats regardless of nesting depth.
   function toCount(val: unknown): number {
     if (typeof val === "number") return val;
@@ -391,20 +406,25 @@ export default function MemberProfile() {
                       {profile.roll_number}
                     </p>
                   )}
+                  {profile.bio && (
+                    <p className="text-slate-300 font-mono text-sm italic mb-4 max-w-lg">
+                      {profile.bio}
+                    </p>
+                  )}
 
                   {/* Social links */}
                   <div className="flex flex-wrap gap-3 mt-4">
                     {profile.github_handle && (
                       <a
-                        href={`https://github.com/${profile.github_handle}`}
+                        href={profile.github_url || `https://github.com/${profile.github_handle}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 border-2 border-white/30 px-3 py-1.5 text-xs font-black text-white uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-colors"
+                        className="flex items-center gap-2 border-2 border-white/30 bg-slate-800 px-3 py-1.5 text-xs font-black text-white uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-colors"
                       >
                         <span className="material-symbols-outlined text-base leading-none">
                           code
                         </span>
-                        @{profile.github_handle}
+                        GitHub
                       </a>
                     )}
                     {profile.linkedin_url && (
@@ -412,7 +432,7 @@ export default function MemberProfile() {
                         href={profile.linkedin_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 border-2 border-white/30 px-3 py-1.5 text-xs font-black text-white uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-colors"
+                        className="flex items-center gap-2 border-2 border-white/30 bg-slate-800 px-3 py-1.5 text-xs font-black text-white uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-colors"
                       >
                         <span className="material-symbols-outlined text-base leading-none">
                           work
@@ -425,7 +445,7 @@ export default function MemberProfile() {
                         href={profile.portfolio_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 border-2 border-white/30 px-3 py-1.5 text-xs font-black text-white uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-colors"
+                        className="flex items-center gap-2 border-2 border-white/30 bg-slate-800 px-3 py-1.5 text-xs font-black text-white uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-colors"
                       >
                         <span className="material-symbols-outlined text-base leading-none">
                           language
@@ -476,6 +496,74 @@ export default function MemberProfile() {
                     value={s.active_days}
                     unit="days"
                   />
+                </div>
+              </StaggerItem>
+            )}
+
+            {/* ── SKILL DISTRIBUTION ── */}
+            {totalSkill > 0 && (
+              <StaggerItem>
+                <div className="border-4 border-slate-900 bg-white p-6 md:p-8 brutalist-shadow">
+                  <div className="mb-6">
+                    <Label>Mastery</Label>
+                    <SectionTitle>Skill Distribution</SectionTitle>
+                  </div>
+                  
+                  {/* Stacked Bar */}
+                  <div className="w-full flex h-12 md:h-16 border-4 border-slate-900 bg-slate-100 mb-4 brutalist-shadow-sm">
+                    {skillFundamentals > 0 && (
+                      <div 
+                        className="bg-[#facc15] h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all duration-500 hover:brightness-110"
+                        style={{ width: `${(skillFundamentals / totalSkill) * 100}%` }}
+                        title={`Fundamentals: ${skillFundamentals}`}
+                      />
+                    )}
+                    {skillDsa > 0 && (
+                      <div 
+                        className="bg-[#38bdf8] h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all duration-500 hover:brightness-110"
+                        style={{ width: `${(skillDsa / totalSkill) * 100}%` }}
+                        title={`DSA: ${skillDsa}`}
+                      />
+                    )}
+                    {skillCp > 0 && (
+                      <div 
+                        className="bg-[#ef4444] h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all duration-500 hover:brightness-110"
+                        style={{ width: `${(skillCp / totalSkill) * 100}%` }}
+                        title={`CP: ${skillCp}`}
+                      />
+                    )}
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="flex flex-wrap gap-4 md:gap-8 mt-4">
+                    {skillFundamentals > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-[#facc15] border-2 border-slate-900" />
+                        <div className="flex flex-col leading-none">
+                          <span className="text-xs font-black uppercase tracking-widest text-slate-900">Fundamentals</span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">{skillFundamentals} problems ({Math.round((skillFundamentals / totalSkill) * 100)}%)</span>
+                        </div>
+                      </div>
+                    )}
+                    {skillDsa > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-[#38bdf8] border-2 border-slate-900" />
+                        <div className="flex flex-col leading-none">
+                          <span className="text-xs font-black uppercase tracking-widest text-slate-900">DSA</span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">{skillDsa} problems ({Math.round((skillDsa / totalSkill) * 100)}%)</span>
+                        </div>
+                      </div>
+                    )}
+                    {skillCp > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-[#ef4444] border-2 border-slate-900" />
+                        <div className="flex flex-col leading-none">
+                          <span className="text-xs font-black uppercase tracking-widest text-slate-900">Competitive</span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">{skillCp} problems ({Math.round((skillCp / totalSkill) * 100)}%)</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </StaggerItem>
             )}
@@ -603,34 +691,52 @@ export default function MemberProfile() {
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    <PlatformCard platform="Codeforces">
+                    <PlatformCard 
+                      platform="Codeforces" 
+                      href={profile.codeforces_handle ? `https://codeforces.com/profile/${profile.codeforces_handle}` : null}
+                    >
                       <StatRow label="Rank" value={s.codeforces_rank_title || "Unrated"} />
                       <StatRow label="Rating" value={s.codeforces_rating || 0} />
                       <StatRow label="Max Rating" value={s.codeforces_max_rating || 0} />
                       <StatRow label="Solved" value={s.codeforces_solved || 0} />
                     </PlatformCard>
                     
-                    <PlatformCard platform="CodeChef">
+                    <PlatformCard 
+                      platform="CodeChef"
+                      href={profile.codechef_handle ? `https://www.codechef.com/users/${profile.codechef_handle}` : null}
+                    >
                       <StatRow label="Rating" value={s.codechef_rating || 0} />
                       <StatRow label="Max Rating" value={s.codechef_max_rating || 0} />
                       <StatRow label="Solved" value={s.codechef_solved || 0} />
                     </PlatformCard>
 
-                    <PlatformCard platform="LeetCode">
+                    <PlatformCard 
+                      platform="LeetCode"
+                      href={profile.leetcode_handle ? `https://leetcode.com/u/${profile.leetcode_handle}/` : null}
+                    >
                       <StatRow label="Total Solved" value={s.leetcode_total || 0} />
                       <StatRow label="Max Rating" value={s.leetcode_max_rating || 0} />
                     </PlatformCard>
 
-                    <PlatformCard platform="GeeksForGeeks">
+                    <PlatformCard 
+                      platform="GeeksForGeeks"
+                      href={profile.gfg_handle ? `https://www.geeksforgeeks.org/user/${profile.gfg_handle}/` : null}
+                    >
                       <StatRow label="Coding Score" value={s.gfg_score || 0} />
                       <StatRow label="Total Solved" value={s.gfg_solved || 0} />
                     </PlatformCard>
 
-                    <PlatformCard platform="GitHub">
+                    <PlatformCard 
+                      platform="GitHub"
+                      href={profile.github_handle ? (profile.github_url || `https://github.com/${profile.github_handle}`) : null}
+                    >
                       <StatRow label="Contributions" value={s.github_contributions || 0} />
                     </PlatformCard>
 
-                    <PlatformCard platform="HackerRank">
+                    <PlatformCard 
+                      platform="HackerRank"
+                      href={profile.hackerrank_handle ? `https://www.hackerrank.com/profile/${profile.hackerrank_handle}` : null}
+                    >
                       <StatRow label="Badges" value={s.hackerrank_badges || 0} />
                     </PlatformCard>
                   </div>
