@@ -225,6 +225,41 @@ export async function getClubStatsSummary(): Promise<ClubStatsSummary> {
 
 // ── Member Profile ─────────────────────────────────────────────────────────
 
+export interface MemberSnapshot {
+  snapshot_date: string;
+  total_score: number;
+  active_days: number;
+  current_streak: number;
+  max_streak: number;
+  leetcode_easy: number;
+  leetcode_medium: number;
+  leetcode_hard: number;
+  leetcode_total: number;
+  gfg_school: number;
+  gfg_basic: number;
+  gfg_easy: number;
+  gfg_medium: number;
+  gfg_hard: number;
+  github_contributions: number;
+  codeforces_rating: number;
+  codeforces_max_rating: number;
+  codeforces_solved: number;
+  codechef_rating: number;
+  codechef_max_rating: number;
+  codechef_solved: number;
+  leetcode_rating: number;
+  leetcode_max_rating: number;
+  gfg_solved: number;
+  gfg_score: number;
+  hackerrank_badges: number;
+  contests_attended: number;
+  leetcode_contests: number;
+  codeforces_contests: number;
+  codechef_contests: number;
+  topic_stats: Record<string, number> | null;
+  badges_detail: Record<string, unknown> | null;
+}
+
 export interface MemberProfile {
   id: string;
   full_name: string;
@@ -240,40 +275,7 @@ export interface MemberProfile {
   linkedin_url: string | null;
   github_url: string | null;
   portfolio_url: string | null;
-  snapshot: {
-    snapshot_date: string;
-    total_score: number;
-    active_days: number;
-    current_streak: number;
-    max_streak: number;
-    leetcode_easy: number;
-    leetcode_medium: number;
-    leetcode_hard: number;
-    leetcode_total: number;
-    gfg_school: number;
-    gfg_basic: number;
-    gfg_easy: number;
-    gfg_medium: number;
-    gfg_hard: number;
-    github_contributions: number;
-    codeforces_rating: number;
-    codeforces_max_rating: number;
-    codeforces_solved: number;
-    codechef_rating: number;
-    codechef_max_rating: number;
-    codechef_solved: number;
-    leetcode_rating: number;
-    leetcode_max_rating: number;
-    gfg_solved: number;
-    gfg_score: number;
-    hackerrank_badges: number;
-    contests_attended: number;
-    leetcode_contests: number;
-    codeforces_contests: number;
-    codechef_contests: number;
-    topic_stats: Record<string, number> | null;
-    badges_detail: Record<string, unknown> | null;
-  } | null;
+  snapshot: MemberSnapshot | null;
 }
 
 /**

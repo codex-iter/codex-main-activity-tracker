@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
 import { getMemberProfile, type MemberProfile } from "../services/codexApi";
+export interface DerivedStats {
+  lcTotal: number;
+  gfgTotal: number;
+  individualTotalSolved: number;
+  skillFundamentals: number;
+  skillDsa: number;
+  skillCp: number;
+  totalSkill: number;
+}
 
 export function useMemberProfile(handle: string) {
   const [profile, setProfile] = useState<MemberProfile | null | undefined>(
