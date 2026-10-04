@@ -210,6 +210,8 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
 
           <PlatformCard platform="GitHub" href={profile.github_handle ? (profile.github_url || `https://github.com/${profile.github_handle}`) : null}>
             <StatRow label="Contributions" value={stats.github_contributions || 0} />
+            <StatRow label="PRs Opened" value={stats.github_prs || 0} />
+            <StatRow label="Issues" value={stats.github_issues || 0} />
           </PlatformCard>
 
           <PlatformCard platform="HackerRank" href={profile.hackerrank_handle ? `https://www.hackerrank.com/profile/${profile.hackerrank_handle}` : null}>

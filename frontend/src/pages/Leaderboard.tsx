@@ -17,6 +17,8 @@ export default function Leaderboard() {
     setSearchQuery,
     sortBy,
     setSortBy,
+    sortMode,
+    setSortMode,
   } = useLeaderboard();
 
   const today = new Date().toLocaleDateString("en-GB", {
@@ -70,6 +72,25 @@ export default function Leaderboard() {
               {today}
             </span>
             <div className="h-px flex-1 bg-slate-700" />
+          </div>
+        </ScrollReveal>
+
+        {/* ── Mode Toggle ── */}
+        <ScrollReveal delay={0.13} className="mb-6 flex justify-center">
+          <div className="flex flex-wrap border-4 border-slate-900 bg-white brutalist-shadow w-fit">
+            {(['GLOBAL', 'DSA', 'DEV'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setSortMode(mode)}
+                className={`px-6 py-3 font-black text-sm md:text-base tracking-widest uppercase transition-colors border-r-4 border-slate-900 last:border-r-0 ${
+                  sortMode === mode
+                    ? "bg-red-500 text-slate-900"
+                    : "bg-white text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {mode === 'DSA' ? 'ALGORITHMS' : mode === 'DEV' ? 'DEVELOPMENT' : 'GLOBAL'}
+              </button>
+            ))}
           </div>
         </ScrollReveal>
 
