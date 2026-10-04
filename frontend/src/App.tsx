@@ -24,7 +24,7 @@ function AnimatedRoutes() {
   return (
     <>
       <TransitionOverlay />
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<PageTransition><Home /></PageTransition>} />
           <Route path="/blogs" element={<PageTransition><Blogs /></PageTransition>} />

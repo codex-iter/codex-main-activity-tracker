@@ -1,6 +1,6 @@
-import { ScrollReveal, StaggerContainer, StaggerItem } from "../animations/ScrollReveal";
-import LeaderboardRow from "./LeaderboardRow";
 import type { LeaderboardMember } from "../../hooks/useLeaderboard";
+import LeaderboardPodium from "./LeaderboardPodium";
+import LeaderboardList from "./LeaderboardList";
 
 function LeaderboardSkeleton() {
   return (
@@ -66,39 +66,18 @@ interface LeaderboardTableProps {
   members: LeaderboardMember[];
   loading: boolean;
   error: string | null;
+  isSearchActive?: boolean;
 }
 
-export default function LeaderboardTable({ members, loading, error }: LeaderboardTableProps) {
+export default function LeaderboardTable({ members, loading, error, isSearchActive }: LeaderboardTableProps) {
   if (loading) return <LeaderboardSkeleton />;
   if (error) return <ErrorState message={error} />;
   if (members.length === 0) return <EmptyState />;
 
   return (
-    <div className="space-y-3">
-      {/* ── Column header (desktop) ── */}
-      <ScrollReveal delay={0.1}>
-        <div className="hidden sm:flex items-center gap-4 px-4 pb-2 mb-2">
-          <div className="w-10 text-center text-[11px] font-bold uppercase tracking-widest text-slate-400">#</div>
-          <div className="w-12" />
-          <div className="flex-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-            Member
-          </div>
-          <div className="flex gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-            <div className="w-16 text-center">Score</div>
-            <div className="w-16 text-center">LC</div>
-            <div className="w-16 text-center">Streak</div>
-            <div className="w-16 text-center">Contests</div>
-          </div>
-        </div>
-      </ScrollReveal>
-
-      <StaggerContainer className="space-y-3">
-        {members.map((member, idx) => (
-          <StaggerItem key={member.id}>
-            <LeaderboardRow member={member} rank={idx + 1} />
-          </StaggerItem>
-        ))}
-      </StaggerContainer>
+    <div className="space-y-4 mt-8 w-full flex flex-col items-center">
+      {!isSearchActive && <LeaderboardPodium members={members} />}
+      {members.length > 0 && <LeaderboardList members={members} />}
     </div>
   );
 }

@@ -28,25 +28,24 @@ export default function Leaderboard() {
   });
 
   return (
-    <div className="bg-background-light min-h-screen font-display text-slate-900">
+    <div className="bg-background-light min-h-screen font-display text-slate-900 relative overflow-hidden">
       <SEO
         title="Leaderboard | CODEX ITER"
         description="Daily coding leaderboard for CODEX ITER members. Track LeetCode, Codeforces, GitHub, CodeChef, GFG, and HackerRank scores."
       />
 
-      <main className="max-w-5xl mx-auto px-6 md:px-20 py-16">
-        {/* ── Hero ── */}
-        <ScrollReveal className="mb-14">
-          <div className="inline-block bg-primary text-white px-4 py-1 mb-4 font-bold uppercase tracking-widest text-xs border-2 border-slate-900">
-            Daily Rankings
+      <main className="max-w-5xl mx-auto px-6 md:px-20 py-16 relative z-10">
+        {/* ── Minimal Glass Hero ── */}
+        <ScrollReveal className="mb-12 text-center flex flex-col items-center">
+          <div className="inline-flex items-center justify-center mx-auto gap-2.5 bg-slate-900 text-white px-6 py-2 mb-6 font-bold uppercase tracking-widest text-sm rounded-full shadow-lg">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+            CODEX
           </div>
-          <h1 className="text-6xl md:text-8xl font-black text-slate-900 uppercase leading-none tracking-tighter mb-4 font-display">
-            LEADER<br />
-            <span className="text-primary italic">BOARD</span>
+          <h1 className="text-5xl md:text-7xl font-black text-slate-900 uppercase tracking-tight mb-4 flex flex-col items-center">
+            Leaderboard
           </h1>
-          <p className="text-xl font-medium max-w-xl text-slate-700 border-l-8 border-primary pl-6">
-            Real-time developer rankings across GitHub, LeetCode, Codeforces, CodeChef,
-            GeeksforGeeks, and HackerRank.
+          <p className="text-sm md:text-base font-medium max-w-lg text-slate-600">
+            Compete with the best and climb your way to the top across GitHub, LeetCode, Codeforces, and HackerRank.
           </p>
         </ScrollReveal>
 
@@ -65,12 +64,12 @@ export default function Leaderboard() {
 
         {/* ── Date strip ── */}
         <ScrollReveal delay={0.12} className="mb-8">
-          <div className="flex items-center gap-4">
-            <div className="h-px flex-1 bg-slate-900" />
-            <span className="font-bold uppercase text-sm tracking-widest text-slate-500 whitespace-nowrap">
+          <div className="flex items-center gap-4 opacity-50">
+            <div className="h-px flex-1 bg-slate-700" />
+            <span className="font-semibold uppercase text-xs tracking-widest text-slate-500 whitespace-nowrap">
               {today}
             </span>
-            <div className="h-px flex-1 bg-slate-900" />
+            <div className="h-px flex-1 bg-slate-700" />
           </div>
         </ScrollReveal>
 
@@ -85,14 +84,14 @@ export default function Leaderboard() {
         </ScrollReveal>
 
         {/* ── Leaderboard Table ── */}
-        <LeaderboardTable members={members} loading={loading} error={error} />
+        <LeaderboardTable members={members} loading={loading} error={error} isSearchActive={searchQuery.length > 0} />
 
         {/* ── Footer note ── */}
         {!loading && !error && members.length > 0 && (
-          <ScrollReveal delay={0.1} className="mt-12 pt-8 border-t-4 border-slate-900">
-            <div className="flex flex-wrap gap-6 text-xs font-bold uppercase tracking-widest text-slate-400">
-              <span>Synced twice daily at 00:00 &amp; 12:00 UTC</span>
-              <span>Score = LC(E×1+M×3+H×6) + CF + CC + GFG + GH + HR</span>
+          <ScrollReveal delay={0.1} className="mt-12 pt-8 border-t border-slate-800/50">
+            <div className="flex flex-wrap items-center justify-center gap-6 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+              <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"/> Synced 00:00 & 12:00 UTC</span>
+              <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-purple-500"/> Score = LC + CF + CC + GH + HR</span>
             </div>
           </ScrollReveal>
         )}
