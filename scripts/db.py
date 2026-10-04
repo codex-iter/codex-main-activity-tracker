@@ -28,3 +28,12 @@ def upsert_snapshot(client: Client, snapshot: dict) -> None:
         snapshot,
         on_conflict="member_id,snapshot_date",
     ).execute()
+
+def get_recent_snapshots(client: Client, member_id: str, today: str, limit: int = 2) -> list:
+    """Fetch the most recent snapshots before today for global streak calculation."""
+    res = client.table("activity_snapshots").select("*") \
+        .eq("member_id", member_id) \
+        .lt("snapshot_date", today) \
+        .order("snapshot_date", desc=True) \
+        .limit(limit).execute()
+    return res.data or []
