@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 import aiohttp
 from .utils import safe_fetch, _safe_int
 
