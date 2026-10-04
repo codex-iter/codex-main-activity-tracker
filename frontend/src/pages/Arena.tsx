@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { getMonthlyLeaderboard, MonthlyLeaderboardEntry } from "../services/codexApi";
+import { getMonthlyLeaderboard } from "../services/codexApi";
+import type { MonthlyLeaderboardEntry } from "../services/codexApi";
 
 export default function Arena() {
   const [data, setData] = useState<MonthlyLeaderboardEntry[]>([]);
