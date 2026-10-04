@@ -4,3 +4,4 @@
 * **CodeChef:** `[https://codechef-stats.tashif.codes](https://codechef-stats.tashif.codes)`
 * **GeeksforGeeks:** `[https://gfg-stats.tashif.codes](https://gfg-stats.tashif.codes)`
 * **HackerRank:** `[https://hackerrank-stats.tashif.codes](https://hackerrank-stats.tashif.codes)`
+* **TUF:**`[https://tuf-stats.tashif.codes](https://tuf-stats.tashif.codes)`

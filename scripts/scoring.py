@@ -40,7 +40,7 @@ def calculate_score(snapshot: dict) -> float:
     cf_solved = snapshot.get("codeforces_solved") or 0
     cf_solved_pts = min(100.0, (cf_solved / 250.0) * 100.0)
 
-    # GFG & CodeChef Volume (Max 100 pts) - Penalizes School/Basic spam
+    # GFG, CodeChef & TUF Volume (Max 100 pts) - Penalizes School/Basic spam
     gfg_weight = (
         (snapshot.get("gfg_school") or 0) * 0.0 +
         (snapshot.get("gfg_basic") or 0) * 0.5 +
@@ -52,10 +52,18 @@ def calculate_score(snapshot: dict) -> float:
     if gfg_weight == 0 and (snapshot.get("gfg_solved") or 0) > 0:
         gfg_weight = (snapshot.get("gfg_solved") or 0) * 1.5
 
-    cc_solved = (snapshot.get("codechef_solved") or 0) * 2.0
-    gfg_cc_pts = min(100.0, ((gfg_weight + cc_solved) / 1000.0) * 100.0)
+    tuf_weight = (
+        (snapshot.get("tuf_easy") or 0) * 1.0 +
+        (snapshot.get("tuf_medium") or 0) * 3.0 +
+        (snapshot.get("tuf_hard") or 0) * 6.0
+    )
+    if tuf_weight == 0 and (snapshot.get("tuf_solved") or 0) > 0:
+        tuf_weight = (snapshot.get("tuf_solved") or 0) * 1.5
 
-    solved_score = lc_solved_pts + cf_solved_pts + gfg_cc_pts
+    cc_solved = (snapshot.get("codechef_solved") or 0) * 2.0
+    gfg_cc_tuf_pts = min(100.0, ((gfg_weight + cc_solved + tuf_weight) / 1000.0) * 100.0)
+
+    solved_score = lc_solved_pts + cf_solved_pts + gfg_cc_tuf_pts
 
     # ---------------------------------------------------------
     # 3. CONSISTENCY & ENGAGEMENT (Max 100 Points)

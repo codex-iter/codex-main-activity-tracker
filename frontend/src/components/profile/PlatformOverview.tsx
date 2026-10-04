@@ -15,7 +15,8 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
   const gfg = stats.gfg_solved || 0;
   const cf = stats.codeforces_solved || 0;
   const cc = stats.codechef_solved || 0;
-  const totalVol = lc + gfg + cf + cc;
+  const tuf = stats.tuf_solved || 0;
+  const totalVol = lc + gfg + cf + cc + tuf;
 
   return (
     <StaggerItem>
@@ -38,6 +39,7 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
               {gfg > 0 && <div className="bg-green-500 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110" style={{ width: `${(gfg / totalVol) * 100}%` }} title={`GeeksForGeeks: ${gfg}`} />}
               {cf > 0 && <div className="bg-red-500 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110" style={{ width: `${(cf / totalVol) * 100}%` }} title={`Codeforces: ${cf}`} />}
               {cc > 0 && <div className="bg-purple-500 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110" style={{ width: `${(cc / totalVol) * 100}%` }} title={`CodeChef: ${cc}`} />}
+              {tuf > 0 && <div className="bg-[#ff4a4a] h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110" style={{ width: `${(tuf / totalVol) * 100}%` }} title={`TUF: ${tuf}`} />}
             </div>
             
             <div className="flex flex-wrap gap-4 mt-4">
@@ -70,6 +72,14 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
                   <div className="w-3 h-3 bg-purple-500 border-2 border-slate-900" />
                   <span className="text-xs font-black uppercase tracking-widest text-slate-900">
                     CodeChef: {cc} ({Math.round((cc / totalVol) * 100)}%)
+                  </span>
+                </div>
+              )}
+              {tuf > 0 && (
+                <div className="border-2 border-slate-900 bg-white px-3 py-1.5 flex items-center gap-2 brutalist-shadow-sm">
+                  <div className="w-3 h-3 bg-[#ff4a4a] border-2 border-slate-900" />
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-900">
+                    TUF: {tuf} ({Math.round((tuf / totalVol) * 100)}%)
                   </span>
                 </div>
               )}
@@ -109,6 +119,13 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
           
           <PlatformCard platform="HackerRank" href={profile.hackerrank_handle ? `https://www.hackerrank.com/profile/${profile.hackerrank_handle}` : null}>
             <StatRow label="Badges" value={stats.hackerrank_badges || 0} />
+          </PlatformCard>
+
+          <PlatformCard platform="takeUforward" href={profile.tuf_handle ? `https://takeuforward.org/profile/${profile.tuf_handle}` : null}>
+            <StatRow label="Total Solved" value={stats.tuf_solved || 0} />
+            <StatRow label="Easy" value={stats.tuf_easy || 0} />
+            <StatRow label="Medium" value={stats.tuf_medium || 0} />
+            <StatRow label="Hard" value={stats.tuf_hard || 0} />
           </PlatformCard>
         </div>
       </div>
