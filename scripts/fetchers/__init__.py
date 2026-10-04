@@ -4,6 +4,7 @@ from .leetcode import fetch_leetcode
 from .codechef import fetch_codechef
 from .gfg import fetch_gfg
 from .hackerrank import fetch_hackerrank
+from .tuf import fetch_tuf
 
 __all__ = [
     "fetch_github",
@@ -12,4 +13,5 @@ __all__ = [
     "fetch_codechef",
     "fetch_gfg",
     "fetch_hackerrank",
+    "fetch_tuf",
 ]
