@@ -101,16 +101,15 @@ export function useLeaderboard() {
     }
 
     const sorted = filtered.sort((a, b) => {
-      if (sortMode === "GLOBAL") {
-        if (sortBy === "Score") return b.total_score - a.total_score;
-        if (sortBy === "Problems Solved") return b.leetcode_total - a.leetcode_total;
-        if (sortBy === "Streak") return b.current_streak - a.current_streak;
-        if (sortBy === "Contests") return b.contests_attended - a.contests_attended;
-        return b.total_score - a.total_score;
-      }
-      if (sortMode === "DSA") return b.dsa_score - a.dsa_score;
-      if (sortMode === "DEV") return b.dev_score - a.dev_score;
-      return 0;
+      if (sortMode === "DSA") return (b.dsa_score || 0) - (a.dsa_score || 0);
+      if (sortMode === "DEV") return (b.dev_score || 0) - (a.dev_score || 0);
+      
+      // GLOBAL default
+      if (sortBy === "Score") return (b.total_score || 0) - (a.total_score || 0);
+      if (sortBy === "Problems Solved") return (b.leetcode_total || 0) - (a.leetcode_total || 0);
+      if (sortBy === "Streak") return (b.current_streak || 0) - (a.current_streak || 0);
+      if (sortBy === "Contests") return (b.contests_attended || 0) - (a.contests_attended || 0);
+      return (b.total_score || 0) - (a.total_score || 0);
     });
 
     return sorted.map((member, index) => ({
