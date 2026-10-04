@@ -14,6 +14,7 @@ from fetchers import (
     fetch_codechef,
     fetch_gfg,
     fetch_hackerrank,
+    fetch_tuf,
 )
 from fetchers.utils import REQUEST_TIMEOUT
 
@@ -118,16 +119,18 @@ async def sync_member_async(session: aiohttp.ClientSession, member: dict, today:
     cc_handle  = member.get("codechef_handle")
     gfg_handle = member.get("gfg_handle")
     hr_handle  = member.get("hackerrank_handle")
+    tuf_handle = member.get("tuf_handle")
 
     async def _noop() -> dict: return {}
 
-    gh_data, cf_data, lc_data, cc_data, gfg_data, hr_data = await asyncio.gather(
+    gh_data, cf_data, lc_data, cc_data, gfg_data, hr_data, tuf_data = await asyncio.gather(
         fetch_github(session, gh_handle) if gh_handle else _noop(),
         fetch_codeforces(session, cf_handle) if cf_handle else _noop(),
         fetch_leetcode(session, lc_handle) if lc_handle else _noop(),
         fetch_codechef(session, cc_handle) if cc_handle else _noop(),
         fetch_gfg(session, gfg_handle) if gfg_handle else _noop(),
         fetch_hackerrank(session, hr_handle) if hr_handle else _noop(),
+        fetch_tuf(session, tuf_handle) if tuf_handle else _noop(),
         return_exceptions=False,
     )
 
@@ -200,6 +203,14 @@ async def sync_member_async(session: aiohttp.ClientSession, member: dict, today:
         snapshot["hackerrank_badges"] = hr_data.get("hackerrank_badges", 0)
         _hr_badges_list = hr_data.get("hr_badges_list", [])
         _hr_topics = hr_data.get("hr_topics", {})
+
+    if tuf_handle and tuf_data:
+        snapshot.update({
+            "tuf_solved": tuf_data.get("tuf_solved", 0),
+            "tuf_easy": tuf_data.get("tuf_easy", 0),
+            "tuf_medium": tuf_data.get("tuf_medium", 0),
+            "tuf_hard": tuf_data.get("tuf_hard", 0),
+        })
 
     snapshot["contests_attended"] = _cf_contests + _lc_contests + _cc_contests
     snapshot["topic_stats"] = build_topic_stats(_lc_summary, _cc_topics, _gfg_topics, _hr_topics)

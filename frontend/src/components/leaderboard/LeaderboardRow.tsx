@@ -84,6 +84,7 @@ export default function LeaderboardRow({
       <div className="hidden sm:flex items-center gap-2 flex-wrap justify-end">
         <StatPill label="Score"    value={member.total_score.toFixed(0)} />
         <StatPill label="LC"       value={member.leetcode_total} />
+        {member.tuf_handle && <StatPill label="TUF" value={member.tuf_solved} />}
         <StatPill label="Streak"   value={`${member.current_streak}d`} />
         <StatPill label="Contests" value={member.contests_attended} />
       </div>

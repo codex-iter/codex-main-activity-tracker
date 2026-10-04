@@ -55,7 +55,8 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
   const gfg = stats.gfg_solved || 0;
   const cf = stats.codeforces_solved || 0;
   const cc = stats.codechef_solved || 0;
-  const totalVol = lc + gfg + cf + cc;
+  const tuf = stats.tuf_solved || 0;
+  const totalVol = lc + gfg + cf + cc + tuf;
 
   const segments: PlatformSegment[] = [
     { key: "lc", label: "LeetCode", count: lc, color: "#facc15", hoverColor: "#fde047" },
@@ -213,6 +214,13 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
 
           <PlatformCard platform="HackerRank" href={profile.hackerrank_handle ? `https://www.hackerrank.com/profile/${profile.hackerrank_handle}` : null}>
             <StatRow label="Badges" value={stats.hackerrank_badges || 0} />
+          </PlatformCard>
+
+          <PlatformCard platform="takeUforward" href={profile.tuf_handle ? `https://takeuforward.org/profile/${profile.tuf_handle}` : null}>
+            <StatRow label="Total Solved" value={stats.tuf_solved || 0} />
+            <StatRow label="Easy" value={stats.tuf_easy || 0} />
+            <StatRow label="Medium" value={stats.tuf_medium || 0} />
+            <StatRow label="Hard" value={stats.tuf_hard || 0} />
           </PlatformCard>
         </div>
       </div>

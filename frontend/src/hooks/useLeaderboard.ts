@@ -12,6 +12,8 @@ export interface LeaderboardMember {
   daily_score_delta: number;
   current_streak: number;
   leetcode_total: number;
+  tuf_handle: string | null;
+  tuf_solved: number;
   contests_attended: number;
   github_contributions: number;
   codeforces_rating: number;
@@ -55,6 +57,8 @@ export function useLeaderboard() {
             daily_score_delta: 0, // placeholder, would need previous snapshot for delta
             current_streak: entry.current_streak,
             leetcode_total: entry.leetcode_total,
+            tuf_handle: entry.members.tuf_handle,
+            tuf_solved: entry.tuf_solved || 0,
             contests_attended: entry.contests_attended,
             github_contributions: entry.github_contributions,
             codeforces_rating: entry.codeforces_rating,
