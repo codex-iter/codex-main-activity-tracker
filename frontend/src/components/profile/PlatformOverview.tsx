@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { StaggerItem } from "../animations/ScrollReveal";
 import type { MemberProfile, MemberSnapshot } from "../../services/codexApi";
 import { Label, SectionTitle } from "./SharedStyles";
@@ -9,7 +10,46 @@ export interface PlatformOverviewProps {
   stats: MemberSnapshot;
 }
 
+interface PlatformSegment {
+  key: string;
+  label: string;
+  count: number;
+  color: string;
+  hoverColor: string;
+}
+
+function getDonutPath(
+  cx: number,
+  cy: number,
+  rOut: number,
+  rIn: number,
+  startAngle: number,
+  endAngle: number
+) {
+  const angleDiff = endAngle - startAngle;
+  const effectiveEndAngle = angleDiff >= 360 ? startAngle + 359.99 : endAngle;
+
+  const rad1 = ((startAngle - 90) * Math.PI) / 180;
+  const rad2 = ((effectiveEndAngle - 90) * Math.PI) / 180;
+
+  const x1Out = cx + rOut * Math.cos(rad1);
+  const y1Out = cy + rOut * Math.sin(rad1);
+  const x2Out = cx + rOut * Math.cos(rad2);
+  const y2Out = cy + rOut * Math.sin(rad2);
+
+  const x1In = cx + rIn * Math.cos(rad1);
+  const y1In = cy + rIn * Math.sin(rad1);
+  const x2In = cx + rIn * Math.cos(rad2);
+  const y2In = cy + rIn * Math.sin(rad2);
+
+  const largeArc = angleDiff > 180 ? 1 : 0;
+
+  return `M ${x1Out} ${y1Out} A ${rOut} ${rOut} 0 ${largeArc} 1 ${x2Out} ${y2Out} L ${x2In} ${y2In} A ${rIn} ${rIn} 0 ${largeArc} 0 ${x1In} ${y1In} Z`;
+}
+
 export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+
   if (!stats) return null;
   const lc = stats.leetcode_total || 0;
   const gfg = stats.gfg_solved || 0;
@@ -17,6 +57,32 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
   const cc = stats.codechef_solved || 0;
   const tuf = stats.tuf_solved || 0;
   const totalVol = lc + gfg + cf + cc + tuf;
+
+  const segments: PlatformSegment[] = [
+    { key: "lc", label: "LeetCode", count: lc, color: "#facc15", hoverColor: "#fde047" },
+    { key: "gfg", label: "GeeksForGeeks", count: gfg, color: "#22c55e", hoverColor: "#4ade80" },
+    { key: "cf", label: "Codeforces", count: cf, color: "#ef4444", hoverColor: "#f87171" },
+    { key: "cc", label: "CodeChef", count: cc, color: "#a855f7", hoverColor: "#c084fc" },
+  ].filter((s) => s.count > 0);
+
+  let currentAngle = 0;
+  const chartSegments = segments.map((seg) => {
+    const percentage = (seg.count / totalVol) * 100;
+    const angleSpan = (seg.count / totalVol) * 360;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + angleSpan;
+    currentAngle = endAngle;
+
+    return {
+      ...seg,
+      percentage,
+      startAngle,
+      endAngle,
+      path: getDonutPath(100, 100, 80, 48, startAngle, endAngle),
+    };
+  });
+
+  const activeSegment = chartSegments.find((s) => s.key === hoveredKey);
 
   return (
     <StaggerItem>
@@ -32,61 +98,90 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
         </div>
 
         {totalVol > 0 && (
-          <div className="mb-10">
-            <h4 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-3">Solved Volume By Platform</h4>
-            <div className="w-full flex h-12 md:h-16 border-4 border-slate-900 bg-slate-100 mb-4 brutalist-shadow-sm cursor-crosshair">
-              {lc > 0 && <div className="bg-yellow-400 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110" style={{ width: `${(lc / totalVol) * 100}%` }} title={`LeetCode: ${lc}`} />}
-              {gfg > 0 && <div className="bg-green-500 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110" style={{ width: `${(gfg / totalVol) * 100}%` }} title={`GeeksForGeeks: ${gfg}`} />}
-              {cf > 0 && <div className="bg-red-500 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110" style={{ width: `${(cf / totalVol) * 100}%` }} title={`Codeforces: ${cf}`} />}
-              {cc > 0 && <div className="bg-purple-500 h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110" style={{ width: `${(cc / totalVol) * 100}%` }} title={`CodeChef: ${cc}`} />}
-              {tuf > 0 && <div className="bg-[#ff4a4a] h-full flex items-center justify-center border-r-4 border-slate-900 last:border-r-0 transition-all hover:brightness-110" style={{ width: `${(tuf / totalVol) * 100}%` }} title={`TUF: ${tuf}`} />}
-            </div>
-            
-            <div className="flex flex-wrap gap-4 mt-4">
-              {lc > 0 && (
-                <div className="border-2 border-slate-900 bg-white px-3 py-1.5 flex items-center gap-2 brutalist-shadow-sm">
-                  <div className="w-3 h-3 bg-yellow-400 border-2 border-slate-900" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-900">
-                    LeetCode: {lc} ({Math.round((lc / totalVol) * 100)}%)
-                  </span>
+          <div className="mb-10 border-2 border-slate-900 bg-slate-50 p-6 brutalist-shadow-sm">
+            <h4 className="text-sm font-black uppercase tracking-widest text-slate-900 mb-4 border-b-2 border-slate-900 pb-2">
+              Solved Volume By Platform
+            </h4>
+
+            <div className="flex flex-col md:flex-row items-center justify-around gap-6">
+              {/* SVG Donut Chart */}
+              <div className="relative w-48 h-48 md:w-56 md:h-56 flex items-center justify-center flex-shrink-0">
+                <svg
+                  viewBox="0 0 200 200"
+                  className="w-full h-full drop-shadow-[3px_3px_0px_#0f172a]"
+                >
+                  {chartSegments.map((seg) => {
+                    const isHovered = hoveredKey === seg.key;
+                    return (
+                      <path
+                        key={seg.key}
+                        d={seg.path}
+                        fill={isHovered ? seg.hoverColor : seg.color}
+                        stroke="#0f172a"
+                        strokeWidth="3.5"
+                        strokeLinejoin="round"
+                        className="transition-all duration-200 cursor-pointer"
+                        style={{
+                          transformOrigin: "100px 100px",
+                          transform: isHovered ? "scale(1.05)" : "scale(1)",
+                        }}
+                        onMouseEnter={() => setHoveredKey(seg.key)}
+                        onMouseLeave={() => setHoveredKey(null)}
+                      />
+                    );
+                  })}
+                </svg>
+
+                {/* Central Info */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-2 text-center">
+                  <div className="bg-white border-2 border-slate-900 px-2.5 py-1 brutalist-shadow-sm max-w-[120px] truncate">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-900 block truncate">
+                      {activeSegment ? activeSegment.label : "Total Volume"}
+                    </span>
+                    <span className="text-xs md:text-sm font-black text-slate-900 block">
+                      {activeSegment
+                        ? `${activeSegment.count} (${Math.round(activeSegment.percentage)}%)`
+                        : `${totalVol}`}
+                    </span>
+                  </div>
                 </div>
-              )}
-              {gfg > 0 && (
-                <div className="border-2 border-slate-900 bg-white px-3 py-1.5 flex items-center gap-2 brutalist-shadow-sm">
-                  <div className="w-3 h-3 bg-green-500 border-2 border-slate-900" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-900">
-                    GFG: {gfg} ({Math.round((gfg / totalVol) * 100)}%)
-                  </span>
-                </div>
-              )}
-              {cf > 0 && (
-                <div className="border-2 border-slate-900 bg-white px-3 py-1.5 flex items-center gap-2 brutalist-shadow-sm">
-                  <div className="w-3 h-3 bg-red-500 border-2 border-slate-900" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-900">
-                    Codeforces: {cf} ({Math.round((cf / totalVol) * 100)}%)
-                  </span>
-                </div>
-              )}
-              {cc > 0 && (
-                <div className="border-2 border-slate-900 bg-white px-3 py-1.5 flex items-center gap-2 brutalist-shadow-sm">
-                  <div className="w-3 h-3 bg-purple-500 border-2 border-slate-900" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-900">
-                    CodeChef: {cc} ({Math.round((cc / totalVol) * 100)}%)
-                  </span>
-                </div>
-              )}
-              {tuf > 0 && (
-                <div className="border-2 border-slate-900 bg-white px-3 py-1.5 flex items-center gap-2 brutalist-shadow-sm">
-                  <div className="w-3 h-3 bg-[#ff4a4a] border-2 border-slate-900" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-900">
-                    TUF: {tuf} ({Math.round((tuf / totalVol) * 100)}%)
-                  </span>
-                </div>
-              )}
+              </div>
+
+              {/* Legend Grid */}
+              <div className="flex flex-wrap md:flex-col gap-3 w-full md:w-auto">
+                {chartSegments.map((seg) => {
+                  const isHovered = hoveredKey === seg.key;
+                  return (
+                    <div
+                      key={seg.key}
+                      onMouseEnter={() => setHoveredKey(seg.key)}
+                      onMouseLeave={() => setHoveredKey(null)}
+                      className={`flex items-center justify-between gap-4 px-3 py-2 border-2 border-slate-900 transition-all cursor-pointer brutalist-shadow-sm ${
+                        isHovered
+                          ? "bg-[#FACC15] -translate-y-0.5 shadow-[3px_3px_0px_0px_#0f172a]"
+                          : "bg-white hover:bg-slate-100"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-4 h-4 border-2 border-slate-900 flex-shrink-0"
+                          style={{ backgroundColor: seg.color }}
+                        />
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-900">
+                          {seg.label}
+                        </span>
+                      </div>
+                      <span className="text-xs font-black text-slate-900 ml-4">
+                        {seg.count} ({Math.round(seg.percentage)}%)
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           <PlatformCard platform="Codeforces" href={profile.codeforces_handle ? `https://codeforces.com/profile/${profile.codeforces_handle}` : null}>
             <StatRow label="Rank" value={stats.codeforces_rating > 0 ? "Rated" : "Unrated"} />
@@ -94,7 +189,7 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
             <StatRow label="Max Rating" value={stats.codeforces_max_rating || 0} />
             <StatRow label="Solved" value={stats.codeforces_solved || 0} />
           </PlatformCard>
-          
+
           <PlatformCard platform="CodeChef" href={profile.codechef_handle ? `https://www.codechef.com/users/${profile.codechef_handle}` : null}>
             <StatRow label="Rating" value={stats.codechef_rating || 0} />
             <StatRow label="Max Rating" value={stats.codechef_max_rating || 0} />
@@ -112,11 +207,11 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
             <StatRow label="Solved" value={stats.gfg_solved || 0} />
             <StatRow label="Coding Score" value={stats.gfg_score || 0} />
           </PlatformCard>
-          
+
           <PlatformCard platform="GitHub" href={profile.github_handle ? (profile.github_url || `https://github.com/${profile.github_handle}`) : null}>
             <StatRow label="Contributions" value={stats.github_contributions || 0} />
           </PlatformCard>
-          
+
           <PlatformCard platform="HackerRank" href={profile.hackerrank_handle ? `https://www.hackerrank.com/profile/${profile.hackerrank_handle}` : null}>
             <StatRow label="Badges" value={stats.hackerrank_badges || 0} />
           </PlatformCard>
@@ -132,3 +227,4 @@ export function PlatformOverview({ profile, stats }: PlatformOverviewProps) {
     </StaggerItem>
   );
 }
+

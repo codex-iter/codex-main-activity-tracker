@@ -27,6 +27,7 @@ export function OpenSourceContributions({ handle }: { handle: string | null }) {
               fontSize={14}
               theme={{ light: ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"] }}
               style={{ fontFamily: "'Space Grotesk', sans-serif", width: "100%" }}
+              transformData={(data) => [...data].reverse()}
               renderBlock={(block, activity) =>
                 React.cloneElement(block as any, {
                   onMouseEnter: (e: React.MouseEvent) => {
@@ -59,3 +60,4 @@ export function OpenSourceContributions({ handle }: { handle: string | null }) {
     </StaggerItem>
   );
 }
+

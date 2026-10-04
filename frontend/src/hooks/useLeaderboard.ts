@@ -94,13 +94,18 @@ export function useLeaderboard() {
       );
     }
 
-    return filtered.sort((a, b) => {
+    const sorted = filtered.sort((a, b) => {
       if (sortBy === "Score") return b.total_score - a.total_score;
       if (sortBy === "Problems Solved") return b.leetcode_total - a.leetcode_total;
       if (sortBy === "Streak") return b.current_streak - a.current_streak;
       if (sortBy === "Contests") return b.contests_attended - a.contests_attended;
       return 0;
     });
+
+    return sorted.map((member, index) => ({
+      ...member,
+      rank: index + 1
+    }));
   }, [rawMembers, searchQuery, sortBy]);
 
   return {

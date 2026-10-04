@@ -1,45 +1,174 @@
 import type { ClubStatsSummary } from "../../services/codexApi";
 
 export default function ClubCommandCenter({ stats }: { stats: ClubStatsSummary }) {
+  const totalSolved = stats.total_club_solved || 1;
+
+  const platforms = [
+    {
+      name: "LeetCode",
+      count: stats.total_leetcode,
+      color: "#FFA116",
+      bgHover: "hover:bg-[#FFA116]/10",
+      pct: Math.round((stats.total_leetcode / totalSolved) * 100),
+      tag: "SOLVED",
+    },
+    {
+      name: "GeeksForGeeks",
+      count: stats.total_gfg,
+      color: "#2F8D46",
+      bgHover: "hover:bg-[#2F8D46]/10",
+      pct: Math.round((stats.total_gfg / totalSolved) * 100),
+      tag: "SOLVED",
+    },
+    {
+      name: "Codeforces",
+      count: stats.total_codeforces,
+      color: "#3B82F6",
+      bgHover: "hover:bg-[#3B82F6]/10",
+      pct: Math.round((stats.total_codeforces / totalSolved) * 100),
+      tag: "SOLVED",
+    },
+    {
+      name: "CodeChef",
+      count: stats.total_codechef,
+      color: "#D97706",
+      bgHover: "hover:bg-[#D97706]/10",
+      pct: Math.round((stats.total_codechef / totalSolved) * 100),
+      tag: "SOLVED",
+    },
+    {
+      name: "HackerRank",
+      count: stats.total_hackerrank_badges,
+      color: "#2EC4B6",
+      bgHover: "hover:bg-[#2EC4B6]/10",
+      pct: null,
+      tag: "BADGES",
+    },
+    {
+      name: "Contests",
+      count: stats.total_club_contests,
+      color: "#FACC15",
+      bgHover: "hover:bg-[#FACC15]/10",
+      pct: null,
+      tag: "FOUGHT",
+    },
+  ];
+
   return (
-    <div className="bg-[#0707f2] border-4 border-slate-900 brutalist-shadow flex flex-col">
-      <div className="p-6 md:p-10 text-white flex flex-col md:flex-row items-center gap-8 md:gap-12 justify-between">
-        <div>
-          <h2 className="text-lg font-bold uppercase tracking-widest text-slate-300 mb-2">Club Command Center</h2>
-          <div className="text-6xl md:text-8xl font-black leading-none uppercase tracking-tighter">
-            {stats.total_club_solved}
-          </div>
-          <div className="text-sm font-bold uppercase tracking-widest text-slate-300 mt-2">
-            Total Problems Solved
+    <div className="border-4 border-slate-900 bg-white brutalist-shadow flex flex-col overflow-hidden relative">
+      {/* ── Top Tactical Console Bar ── */}
+      <div className="bg-slate-900 text-white px-4 py-3 border-b-4 border-slate-900 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <span className="bg-[#FACC15] text-slate-900 font-black px-2 py-0.5 text-xs uppercase tracking-wider border border-slate-900">
+            SYS::COMMAND_CENTER_V2
+          </span>
+          <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-slate-300">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00b8a3] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#00b8a3]"></span>
+            </span>
+            <span className="hidden sm:inline">LIVE TELEMETRY STREAM</span>
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 w-full md:w-auto">
-          <div className="border-2 border-white/20 p-2 sm:p-4 w-full">
-            <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest sm:tracking-wider text-slate-300 mb-1 leading-tight break-words" title="Contests">Contests</div>
-            <div className="text-xl sm:text-2xl font-black leading-none">{stats.total_club_contests}</div>
-            <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">Fought</div>
+        <div className="text-[10px] font-mono uppercase tracking-widest text-slate-400 font-bold">
+          [ AGGREGATED CLUB MATRIX ]
+        </div>
+      </div>
+
+      {/* ── Main Command Body ── */}
+      <div className="bg-[#0707f2] p-6 md:p-8 text-white relative grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        {/* Decorative Grid Lines Background */}
+        <div className="absolute inset-0 grid-pattern opacity-25 pointer-events-none" />
+
+        {/* Hero Metric Section (Left Column) */}
+        <div className="lg:col-span-5 relative z-10 flex flex-col justify-between h-full">
+          <div>
+            <div className="inline-block bg-slate-900 text-[#FACC15] text-[10px] font-black uppercase tracking-widest px-2.5 py-1 mb-3 border border-white/20">
+              CORE METRIC // CUMULATIVE
+            </div>
+            <div className="text-6xl sm:text-7xl md:text-8xl font-black leading-none tracking-tighter text-white drop-shadow-[4px_4px_0px_#03045E]">
+              {stats.total_club_solved.toLocaleString()}
+            </div>
+            <div className="text-sm font-black uppercase tracking-widest text-blue-200 mt-2 flex items-center gap-2">
+              <span>TOTAL PROBLEMS SOLVED</span>
+              <span className="h-2 w-2 bg-[#FACC15] inline-block animate-pulse" />
+            </div>
           </div>
-          <div className="border-2 border-white/20 p-2 sm:p-4 w-full">
-            <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest sm:tracking-wider text-slate-300 mb-1 leading-tight break-words" title="LeetCode">LeetCode</div>
-            <div className="text-xl sm:text-2xl font-black leading-none">{stats.total_leetcode}</div>
+
+          {/* Proportional Contribution Bar */}
+          <div className="mt-6 border-2 border-white/30 p-3 bg-slate-900/60 backdrop-blur-sm">
+            <div className="flex justify-between text-[10px] font-mono font-bold text-slate-300 mb-1.5 uppercase tracking-wider">
+              <span>SOLVED VOLUME DISTRIBUTION</span>
+              <span>100%</span>
+            </div>
+            <div className="h-3 w-full bg-slate-800 flex overflow-hidden border border-white/20">
+              {platforms
+                .filter((p) => p.pct !== null && p.pct > 0)
+                .map((p) => (
+                  <div
+                    key={p.name}
+                    style={{ width: `${p.pct}%`, backgroundColor: p.color }}
+                    className="h-full transition-all duration-300 relative group"
+                    title={`${p.name}: ${p.pct}%`}
+                  >
+                    <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1.5 py-0.5 whitespace-nowrap border border-white pointer-events-none z-30 font-mono">
+                      {p.name}: {p.pct}%
+                    </div>
+                  </div>
+                ))}
+            </div>
           </div>
-          <div className="border-2 border-white/20 p-2 sm:p-4 w-full">
-            <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest sm:tracking-wider text-slate-300 mb-1 leading-tight break-words" title="GeeksForGeeks">GeeksForGeeks</div>
-            <div className="text-xl sm:text-2xl font-black leading-none">{stats.total_gfg}</div>
-          </div>
-          <div className="border-2 border-white/20 p-2 sm:p-4 w-full">
-            <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest sm:tracking-wider text-slate-300 mb-1 leading-tight break-words" title="Codeforces">Codeforces</div>
-            <div className="text-xl sm:text-2xl font-black leading-none">{stats.total_codeforces}</div>
-          </div>
-          <div className="border-2 border-white/20 p-2 sm:p-4 w-full">
-            <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest sm:tracking-wider text-slate-300 mb-1 leading-tight break-words" title="CodeChef">CodeChef</div>
-            <div className="text-xl sm:text-2xl font-black leading-none">{stats.total_codechef}</div>
-          </div>
-          <div className="border-2 border-white/20 p-2 sm:p-4 w-full">
-            <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest sm:tracking-wider text-slate-300 mb-1 leading-tight break-words" title="HackerRank">HackerRank</div>
-            <div className="text-xl sm:text-2xl font-black leading-none">{stats.total_hackerrank_badges}</div>
-            <div className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">Badges</div>
-          </div>
+        </div>
+
+        {/* Telemetry Grid Section (Right Column) */}
+        <div className="lg:col-span-7 relative z-10 grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
+          {platforms.map((p) => (
+            <div
+              key={p.name}
+              className={`bg-slate-900 border-2 border-white/20 p-3 sm:p-4 text-white transition-all duration-200 hover:-translate-y-1 hover:translate-x-1 hover:border-white shadow-[3px_3px_0px_0px_#03045E] group relative overflow-hidden`}
+            >
+              {/* Top Accent Color Bar */}
+              <div
+                className="absolute top-0 left-0 right-0 h-1"
+                style={{ backgroundColor: p.color }}
+              />
+
+              <div className="flex items-center justify-between mb-2">
+                <span
+                  className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-none"
+                  style={{ color: p.color, backgroundColor: `${p.color}18` }}
+                >
+                  {p.name}
+                </span>
+                {p.pct !== null && (
+                  <span className="text-[10px] font-mono font-bold text-slate-400">
+                    {p.pct}%
+                  </span>
+                )}
+              </div>
+
+              <div className="text-2xl sm:text-3xl font-black leading-none tracking-tight text-white mb-1">
+                {p.count.toLocaleString()}
+              </div>
+
+              <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-slate-400">
+                {p.tag}
+              </div>
+
+              {/* Individual Mini Progress Bar */}
+              {p.pct !== null && (
+                <div className="w-full bg-slate-800 h-1 mt-2.5 overflow-hidden">
+                  <div
+                    className="h-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, p.pct * 2)}%`,
+                      backgroundColor: p.color,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
