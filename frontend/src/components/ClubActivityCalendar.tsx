@@ -149,7 +149,7 @@ export default function ClubActivityCalendar() {
                 Problem Solving
               </h3>
               <ActivityCalendar
-                data={days}
+                data={[...days].reverse()}
                 theme={CODEX_THEME}
                 colorScheme="light"
                 blockSize={14}
@@ -189,7 +189,7 @@ export default function ClubActivityCalendar() {
                 Club GitHub Commits
               </h3>
               <ActivityCalendar
-                data={ghDays.length > 0 ? ghDays : [{ date: new Date().toISOString().split('T')[0], count: 0, level: 0 }]}
+                data={ghDays.length > 0 ? [...ghDays].reverse() : [{ date: new Date().toISOString().split('T')[0], count: 0, level: 0 }]}
                 theme={GITHUB_THEME}
                 colorScheme="light"
                 blockSize={14}
@@ -223,6 +223,8 @@ export default function ClubActivityCalendar() {
                 }
               />
             </div>
+
+
 
             {/* Tooltip Portal */}
             {tooltip && createPortal(
