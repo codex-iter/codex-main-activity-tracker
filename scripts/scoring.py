@@ -79,18 +79,25 @@ def calculate_score(snapshot: dict) -> float:
     consistency_score = days_pts + streak_pts + contest_pts
 
     # ---------------------------------------------------------
-    # 4. DEVELOPMENT (Max 100 Points)
+    # 4. DEVELOPMENT (Max 350 Points)
     # ---------------------------------------------------------
-    gh_commits = snapshot.get("github_contributions") or 0  # Target: 500 contributions
-    gh_pts = min(80.0, (gh_commits / 500.0) * 80.0)
-
-    hr_badges = snapshot.get("hackerrank_badges") or 0      # Target: 4 badges
-    hr_pts = min(20.0, hr_badges * 5.0)
-
-    dev_score = gh_pts + hr_pts
+    gh_commits = snapshot.get("github_contributions") or 0
+    gh_repos = snapshot.get("github_repos") or 0
+    gh_prs = snapshot.get("github_prs") or 0
+    gh_issues = snapshot.get("github_issues") or 0
+    hr_badges = snapshot.get("hackerrank_badges") or 0
+    
+    dev_raw = (gh_commits * 0.1) + (gh_repos * 2.0) + (gh_prs * 10.0) + (gh_issues * 3.0) + (hr_badges * 5.0)
+    dev_score = min(350.0, dev_raw)
 
     # ---------------------------------------------------------
-    # TOTAL SCORE AGGREGATION (0 - 1000)
+    # TOTAL SCORE AGGREGATION
     # ---------------------------------------------------------
-    total = rating_score + solved_score + consistency_score + dev_score
-    return round(float(total), 2)
+    dsa_score = rating_score + solved_score
+    total = dsa_score + dev_score + consistency_score
+    
+    return {
+        "dsa_score": round(float(dsa_score), 2),
+        "dev_score": round(float(dev_score), 2),
+        "total_score": round(float(total), 2)
+    }

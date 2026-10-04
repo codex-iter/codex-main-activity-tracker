@@ -99,7 +99,9 @@ def calculate_total_activity(snapshot: dict) -> int:
         snapshot.get("gfg_solved", 0) +
         snapshot.get("tuf_solved", 0) +
         snapshot.get("hackerrank_badges", 0) +
-        snapshot.get("github_contributions", 0)
+        snapshot.get("github_contributions", 0) +
+        snapshot.get("github_prs", 0) +
+        snapshot.get("github_issues", 0)
     )
 
 async def sync_member_async(supabase_client, session: aiohttp.ClientSession, member: dict, today: str) -> dict:
@@ -110,7 +112,7 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
     snapshot = {
         "member_id": member_id,
         "snapshot_date": today,
-        "github_contributions": 0, "github_repos": 0,
+        "github_contributions": 0, "github_repos": 0, "github_prs": 0, "github_issues": 0,
         "codeforces_rating": 0, "codeforces_solved": 0, "codeforces_max_rating": 0, "codeforces_rank_title": "Unrated",
         "leetcode_easy": 0, "leetcode_medium": 0, "leetcode_hard": 0, "leetcode_total": 0,
         "leetcode_rating": 0, "leetcode_max_rating": 0,
@@ -118,7 +120,7 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
         "gfg_score": 0, "gfg_solved": 0,
         "gfg_school": 0, "gfg_basic": 0, "gfg_easy": 0, "gfg_medium": 0, "gfg_hard": 0,
         "hackerrank_badges": 0,
-        "total_score": 0.0,
+        "total_score": 0.0, "dsa_score": 0.0, "dev_score": 0.0,
         "active_days": 0, "current_streak": 0, "max_streak": 0, "total_submissions": 0,
         "contests_attended": 0, "leetcode_contests": 0, "codeforces_contests": 0, "codechef_contests": 0,
         "topic_stats": {}, "badges_detail": [],
@@ -153,6 +155,8 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
         snapshot.update({
             "github_contributions": gh_data.get("github_contributions", 0),
             "github_repos": gh_data.get("github_repos", 0),
+            "github_prs": gh_data.get("github_prs", 0),
+            "github_issues": gh_data.get("github_issues", 0),
         })
 
     if cf_handle and cf_data:
@@ -258,8 +262,11 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
 
     snapshot["max_streak"] = max(prev_max_streak, snapshot["current_streak"])
 
-    snapshot["total_score"] = calculate_score(snapshot)
-    log.info("  ✓ %s — Score: %.2f", name, snapshot["total_score"])
+    scores = calculate_score(snapshot)
+    snapshot["total_score"] = scores["total_score"]
+    snapshot["dsa_score"] = scores["dsa_score"]
+    snapshot["dev_score"] = scores["dev_score"]
+    log.info("  ✓ %s — Total: %.2f (DSA: %.2f | Dev: %.2f)", name, snapshot["total_score"], snapshot["dsa_score"], snapshot["dev_score"])
 
     return snapshot
 

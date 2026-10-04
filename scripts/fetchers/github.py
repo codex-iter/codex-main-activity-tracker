@@ -5,17 +5,20 @@ from .utils import safe_fetch, _safe_int
 
 log = logging.getLogger(__name__)
 
+gh_search_semaphore = asyncio.Semaphore(2)
+
 async def fetch_github(session: aiohttp.ClientSession, handle: str) -> dict:
     """
-    Fetch GitHub contributions (current year) and public repo count via GraphQL.
-
-    Response path:
-      data.user.repositories.totalCount
-      data.user.contributionsCollection.contributionCalendar.totalContributions
-
-    Returns: { github_contributions, github_repos }
+    Fetch GitHub contributions, public repo count, PRs, and Issues.
     """
-    token = os.environ.get("LEADERBOARD_GH_PAT", "")
+    token = os.environ.get("GH_PAT") or os.environ.get("LEADERBOARD_GH_PAT") or ""
+    headers = {"Content-Type": "application/json"}
+    rest_headers = {"Accept": "application/vnd.github.v3+json"}
+    
+    if token:
+        headers["Authorization"] = f"bearer {token}"
+        rest_headers["Authorization"] = f"token {token}"
+
     query = """
     query($login: String!) {
       user(login: $login) {
@@ -26,26 +29,56 @@ async def fetch_github(session: aiohttp.ClientSession, handle: str) -> dict:
       }
     }
     """
-    data = await safe_fetch(
-        session,
-        "https://api.github.com/graphql",
-        method="POST",
-        headers={
-            "Authorization": f"bearer {token}",
-            "Content-Type": "application/json",
-        },
-        json_body={"query": query, "variables": {"login": handle}},
+    
+    pr_url = f"https://api.github.com/search/issues?q=author:{handle}+type:pr"
+    issue_url = f"https://api.github.com/search/issues?q=author:{handle}+type:issue"
+
+    async def _fetch_graphql():
+        return await safe_fetch(
+            session,
+            "https://api.github.com/graphql",
+            method="POST",
+            headers=headers,
+            json_body={"query": query, "variables": {"login": handle}},
+        )
+    
+    async def _fetch_rest(url):
+        async with gh_search_semaphore:
+            try:
+                return await safe_fetch(session, url, method="GET", headers=rest_headers)
+            finally:
+                await asyncio.sleep(1.0)
+
+    gql_data, pr_data, issue_data = await asyncio.gather(
+        _fetch_graphql(),
+        _fetch_rest(pr_url),
+        _fetch_rest(issue_url),
+        return_exceptions=True
     )
-    user = data.get("data", {}).get("user") or {}
-    contributions = (
-        user.get("contributionsCollection", {})
-            .get("contributionCalendar", {})
-            .get("totalContributions", 0)
-    )
-    repos = user.get("repositories", {}).get("totalCount", 0)
+    
     result = {
-        "github_contributions": _safe_int(contributions),
-        "github_repos": _safe_int(repos),
+        "github_contributions": 0,
+        "github_repos": 0,
+        "github_prs": 0,
+        "github_issues": 0,
     }
+
+    if not isinstance(gql_data, Exception) and gql_data:
+        user = gql_data.get("data", {}).get("user") or {}
+        contributions = (
+            user.get("contributionsCollection", {})
+                .get("contributionCalendar", {})
+                .get("totalContributions", 0)
+        )
+        repos = user.get("repositories", {}).get("totalCount", 0)
+        result["github_contributions"] = _safe_int(contributions)
+        result["github_repos"] = _safe_int(repos)
+        
+    if not isinstance(pr_data, Exception) and pr_data:
+        result["github_prs"] = _safe_int(pr_data.get("total_count", 0))
+        
+    if not isinstance(issue_data, Exception) and issue_data:
+        result["github_issues"] = _safe_int(issue_data.get("total_count", 0))
+
     log.info("    ✓ GitHub       -> %s", result)
     return result

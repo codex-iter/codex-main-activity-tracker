@@ -96,6 +96,19 @@ export default function Navbar() {
             );
           })}
 
+          <motion.div
+            initial={prefersReduced ? {} : { opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.5 }}
+          >
+            <Link
+              to="/arena"
+              className="bg-red-500 text-slate-900 px-6 py-2 font-black brutalist-shadow border-2 border-slate-900 transition-colors hover:bg-slate-900 hover:text-red-500"
+            >
+              ARENA
+            </Link>
+          </motion.div>
+
           <motion.button
             onClick={() => window.open("https://whatsapp.com/channel/0029Vb7SavAElagvuWq2i10a", "_blank")}
             initial={prefersReduced ? {} : { opacity: 0, y: -8 }}
@@ -141,6 +154,13 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
+              <Link
+                to="/arena"
+                onClick={() => setIsMenuOpen(false)}
+                className="bg-red-500 text-slate-900 text-center px-6 py-3 font-black brutalist-shadow border-2 border-slate-900 transition-all hover:bg-slate-900 hover:text-red-500 w-full mt-2"
+              >
+                ARENA
+              </Link>
               <button
                 onClick={() => window.open("https://whatsapp.com/channel/0029Vb7SavAElagvuWq2i10a", "_blank")}
                 className="bg-primary text-white px-6 py-3 font-bold brutalist-shadow border-2 border-slate-900 transition-all hover:bg-white hover:text-slate-900 w-full mt-2 cursor-pointer"

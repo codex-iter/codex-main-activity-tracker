@@ -16,6 +16,7 @@ import { CustomScrollbar } from "./components/ui/CustomScrollbar"
 import Projects from "./pages/Projects"
 import Leaderboard from "./pages/Leaderboard"
 import MemberProfile from "./pages/MemberProfile"
+import Arena from "./pages/Arena"
 
 // Inner component so useLocation works inside Router
 function AnimatedRoutes() {
@@ -34,6 +35,7 @@ function AnimatedRoutes() {
           <Route path="/blogs/:slug" element={<PageTransition><BlogDetail /></PageTransition>} />
           <Route path="/leaderboard" element={<PageTransition><Leaderboard /></PageTransition>} />
           <Route path="/profile/:handle" element={<PageTransition><MemberProfile /></PageTransition>} />
+          <Route path="/arena" element={<PageTransition><Arena /></PageTransition>} />
         </Routes>
       </AnimatePresence>
     </>
