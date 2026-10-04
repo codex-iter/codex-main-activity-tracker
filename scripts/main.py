@@ -91,7 +91,18 @@ def build_badges_detail(lc_badges_list: list, lc_badge_name: str, hr_badges_list
 # Async Per-Member Sync
 # ---------------------------------------------------------------------------
 
-async def sync_member_async(session: aiohttp.ClientSession, member: dict, today: str) -> dict:
+def calculate_total_activity(snapshot: dict) -> int:
+    return (
+        snapshot.get("leetcode_total", 0) +
+        snapshot.get("codeforces_solved", 0) +
+        snapshot.get("codechef_solved", 0) +
+        snapshot.get("gfg_solved", 0) +
+        snapshot.get("tuf_solved", 0) +
+        snapshot.get("hackerrank_badges", 0) +
+        snapshot.get("github_contributions", 0)
+    )
+
+async def sync_member_async(supabase_client, session: aiohttp.ClientSession, member: dict, today: str) -> dict:
     member_id = member["id"]
     name = member.get("full_name", "Unknown")
     log.info("  → Syncing: %s (%s)", name, member_id)
@@ -180,8 +191,6 @@ async def sync_member_async(session: aiohttp.ClientSession, member: dict, today:
         _cc_contests = cc_data.get("cc_contests_attended", 0)
         snapshot["active_days"] += cc_data.get("cc_active_days", 0)
         snapshot["total_submissions"] += cc_data.get("cc_total_submissions", 0)
-        snapshot["current_streak"] = max(snapshot["current_streak"], cc_data.get("cc_current_streak", 0))
-        snapshot["max_streak"] = max(snapshot["max_streak"], cc_data.get("cc_max_streak", 0))
 
     if gfg_handle and gfg_data:
         snapshot.update({
@@ -196,8 +205,6 @@ async def sync_member_async(session: aiohttp.ClientSession, member: dict, today:
         _gfg_topics = gfg_data.get("gfg_topics", {})
         snapshot["active_days"] += gfg_data.get("gfg_active_days", 0)
         snapshot["total_submissions"] += gfg_data.get("gfg_total_submissions", 0)
-        snapshot["current_streak"] = max(snapshot["current_streak"], gfg_data.get("gfg_current_streak", 0))
-        snapshot["max_streak"] = max(snapshot["max_streak"], gfg_data.get("gfg_max_streak", 0))
 
     if hr_handle and hr_data:
         snapshot["hackerrank_badges"] = hr_data.get("hackerrank_badges", 0)
@@ -215,6 +222,41 @@ async def sync_member_async(session: aiohttp.ClientSession, member: dict, today:
     snapshot["contests_attended"] = _cf_contests + _lc_contests + _cc_contests
     snapshot["topic_stats"] = build_topic_stats(_lc_summary, _cc_topics, _gfg_topics, _hr_topics)
     snapshot["badges_detail"] = build_badges_detail(_lc_badges_list, _lc_badge_name, _hr_badges_list)
+
+    # -----------------------------------------------------------------------
+    # Global CODEX Streak Logic
+    # -----------------------------------------------------------------------
+    from datetime import datetime, timedelta
+    from db import get_recent_snapshots
+    
+    today_date = datetime.strptime(today, "%Y-%m-%d").date()
+    yesterday_str = (today_date - timedelta(days=1)).strftime("%Y-%m-%d")
+    
+    recent_snapshots = get_recent_snapshots(supabase_client, member_id, today, limit=2)
+    yesterday_snap = recent_snapshots[0] if len(recent_snapshots) > 0 else None
+    day_before_snap = recent_snapshots[1] if len(recent_snapshots) > 1 else None
+
+    if yesterday_snap and yesterday_snap.get("snapshot_date") == yesterday_str:
+        yesterday_total = calculate_total_activity(yesterday_snap)
+        day_before_total = calculate_total_activity(day_before_snap) if day_before_snap else 0
+        coded_yesterday = yesterday_total > day_before_total
+        
+        base_streak = yesterday_snap.get("current_streak", 0) if coded_yesterday else 0
+        prev_max_streak = yesterday_snap.get("max_streak", 0)
+        prev_total = yesterday_total
+    else:
+        base_streak = 0
+        prev_max_streak = yesterday_snap.get("max_streak", 0) if yesterday_snap else 0
+        prev_total = calculate_total_activity(yesterday_snap) if yesterday_snap else 0
+
+    current_total = calculate_total_activity(snapshot)
+
+    if current_total > prev_total:
+        snapshot["current_streak"] = base_streak + 1
+    else:
+        snapshot["current_streak"] = base_streak
+
+    snapshot["max_streak"] = max(prev_max_streak, snapshot["current_streak"])
 
     snapshot["total_score"] = calculate_score(snapshot)
     log.info("  ✓ %s — Score: %.2f", name, snapshot["total_score"])
@@ -251,7 +293,7 @@ async def run_sync() -> None:
         for chunk_idx, chunk in enumerate(chunks, start=1):
             log.info("-" * 60 + f"\nChunk {chunk_idx}/{total_chunks} — processing {len(chunk)} member(s)...")
 
-            tasks = [sync_member_async(session, m, today) for m in chunk]
+            tasks = [sync_member_async(supabase_client, session, m, today) for m in chunk]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             for member, result in zip(chunk, results):

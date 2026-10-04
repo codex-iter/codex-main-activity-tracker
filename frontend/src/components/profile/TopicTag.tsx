@@ -1,13 +1,10 @@
 
 
-export function TopicTag({ topic, count }: { topic: string; count: number }) {
+export function TopicTag({ topic }: { topic: string }) {
   return (
-    <div className="flex items-center gap-0 border-2 border-slate-900 overflow-hidden">
-      <span className="px-3 py-1.5 text-xs font-black uppercase tracking-tight text-slate-900 bg-white">
+    <div className="border-2 border-slate-900 bg-white brutalist-shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] cursor-default">
+      <span className="block px-3 py-1.5 text-xs font-black uppercase tracking-widest text-slate-900">
         {topic}
-      </span>
-      <span className="px-3 py-1.5 text-xs font-black bg-primary text-white min-w-[32px] text-center">
-        {String(count)}
       </span>
     </div>
   );

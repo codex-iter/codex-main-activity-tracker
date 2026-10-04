@@ -12,8 +12,8 @@ export function TopicBreakdown({ sortedTopics }: { sortedTopics: [string, number
           <SectionTitle>Topic Breakdown</SectionTitle>
         </div>
         <div className="flex flex-wrap gap-2">
-          {sortedTopics.map(([topic, count]) => (
-            <TopicTag key={topic} topic={topic} count={count} />
+          {sortedTopics.map(([topic]) => (
+            <TopicTag key={topic} topic={topic} />
           ))}
         </div>
       </div>
