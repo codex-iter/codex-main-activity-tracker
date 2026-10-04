@@ -23,7 +23,6 @@ export interface LeaderboardMember {
   hackerrank_badges: number;
 }
 
-export type SortCriteria = "Score" | "Problems Solved" | "Streak" | "Contests";
 export type SortMode = 'GLOBAL' | 'DSA' | 'DEV';
 
 export function useLeaderboard() {
@@ -34,7 +33,6 @@ export function useLeaderboard() {
   const [error, setError] = useState<string | null>(null);
   
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortCriteria>("Score");
   const [sortMode, setSortMode] = useState<SortMode>("GLOBAL");
 
   useEffect(() => {
@@ -103,20 +101,14 @@ export function useLeaderboard() {
     const sorted = filtered.sort((a, b) => {
       if (sortMode === "DSA") return (b.dsa_score || 0) - (a.dsa_score || 0);
       if (sortMode === "DEV") return (b.dev_score || 0) - (a.dev_score || 0);
-      
-      // GLOBAL default
-      if (sortBy === "Score") return (b.total_score || 0) - (a.total_score || 0);
-      if (sortBy === "Problems Solved") return (b.leetcode_total || 0) - (a.leetcode_total || 0);
-      if (sortBy === "Streak") return (b.current_streak || 0) - (a.current_streak || 0);
-      if (sortBy === "Contests") return (b.contests_attended || 0) - (a.contests_attended || 0);
-      return (b.total_score || 0) - (a.total_score || 0);
+      return (b.total_score || 0) - (a.total_score || 0); // GLOBAL default
     });
 
     return sorted.map((member, index) => ({
       ...member,
       rank: index + 1
     }));
-  }, [rawMembers, searchQuery, sortBy]);
+  }, [rawMembers, searchQuery, sortMode]);
 
   return {
     members,
@@ -126,8 +118,6 @@ export function useLeaderboard() {
     error,
     searchQuery,
     setSearchQuery,
-    sortBy,
-    setSortBy,
     sortMode,
     setSortMode
   };

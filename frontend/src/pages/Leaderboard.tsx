@@ -15,8 +15,6 @@ export default function Leaderboard() {
     error,
     searchQuery,
     setSearchQuery,
-    sortBy,
-    setSortBy,
     sortMode,
     setSortMode,
   } = useLeaderboard();
@@ -99,8 +97,6 @@ export default function Leaderboard() {
           <LeaderboardControls
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
           />
         </ScrollReveal>
 
