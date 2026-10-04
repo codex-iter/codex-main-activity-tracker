@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ActivityCalendar, type ThemeInput } from "react-activity-calendar";
 import { getClubActivityMap, getClubGithubHeatmap, type ActivityDay } from "../services/codexApi";
 
@@ -95,17 +96,17 @@ export default function ClubActivityCalendar() {
   const activeDays   = days.filter((d) => d.count > 0).length;
 
   return (
-    <section className="bg-background-dark border-4 border-slate-900 p-6 md:p-10 brutalist-shadow relative">
+    <section className="bg-white border-4 border-slate-900 p-6 md:p-10 brutalist-shadow relative">
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
         <div>
-          <div className="inline-block bg-primary text-white px-3 py-0.5 mb-3 font-bold uppercase tracking-widest text-[10px] border-2 border-white/20">
+          <div className="inline-block bg-primary text-white px-3 py-0.5 mb-3 font-bold uppercase tracking-widest text-[10px] border-2 border-slate-900">
             Club Overview
           </div>
-          <h2 className="text-3xl md:text-4xl font-black text-white uppercase leading-none tracking-tighter">
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 uppercase leading-none tracking-tighter">
             Collective{" "}
-            <span className="text-[#CAF0F8]">CODEX</span>{" "}
+            <span className="text-slate-500">CODEX</span>{" "}
             Activity
           </h2>
         </div>
@@ -113,19 +114,19 @@ export default function ClubActivityCalendar() {
         {/* ── Summary stats ── */}
         {!loading && !error && days.length > 0 && (
           <div className="flex gap-4 flex-wrap">
-            <div className="flex flex-col items-center border-2 border-white/20 px-4 py-2 min-w-[80px]">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-1">
+            <div className="flex flex-col items-center border-4 border-slate-900 bg-slate-50 px-4 py-2 min-w-[80px]">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 leading-none mb-1">
                 Total Output
               </span>
-              <span className="text-2xl font-black text-white leading-tight">
+              <span className="text-2xl font-black text-slate-900 leading-tight">
                 {totalActions.toLocaleString()}
               </span>
             </div>
-            <div className="flex flex-col items-center border-2 border-white/20 px-4 py-2 min-w-[80px]">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 leading-none mb-1">
+            <div className="flex flex-col items-center border-4 border-slate-900 bg-slate-50 px-4 py-2 min-w-[80px]">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 leading-none mb-1">
                 Active Days
               </span>
-              <span className="text-2xl font-black text-[#CAF0F8] leading-tight">
+              <span className="text-2xl font-black text-slate-700 leading-tight">
                 {activeDays}
               </span>
             </div>
@@ -144,13 +145,13 @@ export default function ClubActivityCalendar() {
         {!loading && !error && days.length > 0 && (
           <div className="flex flex-col gap-10">
             <div>
-              <h3 className="text-xl font-black uppercase text-white mb-4 tracking-tight border-l-4 border-primary pl-3">
+              <h3 className="text-xl font-black uppercase text-slate-900 mb-4 tracking-tight border-l-4 border-primary pl-3">
                 Problem Solving
               </h3>
               <ActivityCalendar
                 data={days}
                 theme={CODEX_THEME}
-                colorScheme="dark"
+                colorScheme="light"
                 blockSize={14}
                 blockMargin={4}
                 blockRadius={2}
@@ -160,7 +161,7 @@ export default function ClubActivityCalendar() {
                   totalCount: "{{count}} problems in {{year}}",
                 }}
                 style={{
-                  color: "#94a3b8",
+                  color: "#64748b",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
                 showWeekdayLabels
@@ -184,13 +185,13 @@ export default function ClubActivityCalendar() {
             </div>
 
             <div>
-              <h3 className="text-xl font-black uppercase text-white mb-4 tracking-tight border-l-4 border-[#39d353] pl-3">
+              <h3 className="text-xl font-black uppercase text-slate-900 mb-4 tracking-tight border-l-4 border-[#39d353] pl-3">
                 Club GitHub Commits
               </h3>
               <ActivityCalendar
                 data={ghDays.length > 0 ? ghDays : [{ date: new Date().toISOString().split('T')[0], count: 0, level: 0 }]}
                 theme={GITHUB_THEME}
-                colorScheme="dark"
+                colorScheme="light"
                 blockSize={14}
                 blockMargin={4}
                 blockRadius={2}
@@ -200,7 +201,7 @@ export default function ClubActivityCalendar() {
                   totalCount: "{{count}} commits in {{year}}",
                 }}
                 style={{
-                  color: "#94a3b8",
+                  color: "#64748b",
                   fontFamily: "'Space Grotesk', sans-serif",
                 }}
                 showWeekdayLabels
@@ -224,7 +225,7 @@ export default function ClubActivityCalendar() {
             </div>
 
             {/* Tooltip Portal */}
-            {tooltip && (
+            {tooltip && createPortal(
               <div
                 className="fixed z-[100] pointer-events-none -translate-x-1/2 -translate-y-[120%]"
                 style={{ left: tooltip.x, top: tooltip.y }}
@@ -237,7 +238,8 @@ export default function ClubActivityCalendar() {
                     {tooltip.activity.count} {tooltip.label}
                   </span>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         )}
