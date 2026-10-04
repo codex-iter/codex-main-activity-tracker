@@ -49,16 +49,19 @@ export function useLeaderboard() {
         ]);
 
         if (!cancelled) {
-          const mappedMembers: LeaderboardMember[] = lbData.map((entry, index) => ({
+          // Ensure base array is strictly ordered by total_score descending to calculate accurate global ranks
+          const sortedLb = [...lbData].sort((a, b) => (b.total_score || 0) - (a.total_score || 0));
+
+          const mappedMembers: LeaderboardMember[] = sortedLb.map((entry, index) => ({
             id: entry.id,
-            rank: index + 1, // original rank by score
+            rank: index + 1, // true global rank by score
             handle: entry.members.github_handle ?? "",
             full_name: entry.members.full_name ?? "—",
             avatar_url: entry.members.avatar_url,
             total_score: entry.total_score,
             dsa_score: entry.dsa_score,
             dev_score: entry.dev_score,
-            daily_score_delta: 0, // placeholder, would need previous snapshot for delta
+            daily_score_delta: 0,
             current_streak: entry.current_streak,
             leetcode_total: entry.leetcode_total,
             tuf_handle: entry.members.tuf_handle,
@@ -88,7 +91,7 @@ export function useLeaderboard() {
   }, []);
 
   const members = useMemo(() => {
-    let filtered = rawMembers;
+    let filtered = [...rawMembers];
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -98,16 +101,11 @@ export function useLeaderboard() {
       );
     }
 
-    const sorted = filtered.sort((a, b) => {
+    return filtered.sort((a, b) => {
       if (sortMode === "DSA") return (b.dsa_score || 0) - (a.dsa_score || 0);
       if (sortMode === "DEV") return (b.dev_score || 0) - (a.dev_score || 0);
       return (b.total_score || 0) - (a.total_score || 0); // GLOBAL default
     });
-
-    return sorted.map((member, index) => ({
-      ...member,
-      rank: index + 1
-    }));
   }, [rawMembers, searchQuery, sortMode]);
 
   return {
