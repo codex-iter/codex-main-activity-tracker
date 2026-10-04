@@ -10,9 +10,10 @@ export default function Arena() {
     async function fetchData() {
       try {
         const res = await getMonthlyLeaderboard();
-        setData(res);
+        setData(res || []);
       } catch (e) {
-        console.error(e);
+        console.error("[Arena] Error fetching monthly leaderboard:", e);
+        setData([]);
       } finally {
         setIsLoading(false);
       }
