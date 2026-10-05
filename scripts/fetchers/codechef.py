@@ -28,20 +28,13 @@ async def fetch_codechef(session: aiohttp.ClientSession, handle: str) -> dict:
 
     async with cc_semaphore:
         try:
-            profile_target = urllib.parse.quote(BASE, safe='')
-            profile_resp = await safe_fetch(session, f"https://api.allorigins.win/raw?url={profile_target}")
+            profile_resp = await safe_fetch(session, BASE)
             await asyncio.sleep(0.5)
-            
-            heatmap_target = urllib.parse.quote(f"{BASE}/heatmap", safe='')
-            heatmap_resp = await safe_fetch(session, f"https://api.allorigins.win/raw?url={heatmap_target}")
+            heatmap_resp = await safe_fetch(session, f"{BASE}/heatmap")
             await asyncio.sleep(0.5)
-            
-            contests_target = urllib.parse.quote(f"{BASE}/contests", safe='')
-            contests_resp = await safe_fetch(session, f"https://api.allorigins.win/raw?url={contests_target}")
+            contests_resp = await safe_fetch(session, f"{BASE}/contests")
             await asyncio.sleep(0.5)
-            
-            stats_target = urllib.parse.quote(f"{BASE}/stats", safe='')
-            stats_resp = await safe_fetch(session, f"https://api.allorigins.win/raw?url={stats_target}")
+            stats_resp = await safe_fetch(session, f"{BASE}/stats")
         finally:
             await asyncio.sleep(1.0)
 
