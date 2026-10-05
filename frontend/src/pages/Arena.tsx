@@ -264,9 +264,9 @@ export default function Arena() {
           </ScrollReveal>
         )}
 
-        {/* ── Category Filters ── */}
+        {/* ── Category Filters & Scroll Anchor ── */}
         <ScrollReveal delay={0.05} className="mb-8 flex justify-center">
-          <div className="grid grid-cols-3 border-4 border-slate-900 bg-white brutalist-shadow w-full max-w-lg">
+          <div id="leaderboard-table" className="grid grid-cols-3 border-4 border-slate-900 bg-white brutalist-shadow w-full max-w-lg scroll-mt-24">
             {(["ALL", "DSA", "DEV"] as const).map((cat) => (
               <button
                 key={cat}
