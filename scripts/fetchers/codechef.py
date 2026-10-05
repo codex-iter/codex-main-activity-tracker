@@ -5,7 +5,7 @@ from .utils import safe_fetch, _safe_int
 
 log = logging.getLogger(__name__)
 
-cc_semaphore = asyncio.Semaphore(2)
+cc_semaphore = asyncio.Semaphore(1)
 
 async def fetch_codechef(session: aiohttp.ClientSession, handle: str) -> dict:
     """
@@ -28,12 +28,13 @@ async def fetch_codechef(session: aiohttp.ClientSession, handle: str) -> dict:
 
     async with cc_semaphore:
         try:
-            profile_resp, heatmap_resp, contests_resp, stats_resp = await asyncio.gather(
-                safe_fetch(session, BASE),
-                safe_fetch(session, f"{BASE}/heatmap"),
-                safe_fetch(session, f"{BASE}/contests"),
-                safe_fetch(session, f"{BASE}/stats"),
-            )
+            profile_resp = await safe_fetch(session, BASE)
+            await asyncio.sleep(0.5)
+            heatmap_resp = await safe_fetch(session, f"{BASE}/heatmap")
+            await asyncio.sleep(0.5)
+            contests_resp = await safe_fetch(session, f"{BASE}/contests")
+            await asyncio.sleep(0.5)
+            stats_resp = await safe_fetch(session, f"{BASE}/stats")
         finally:
             await asyncio.sleep(1.0)
 
