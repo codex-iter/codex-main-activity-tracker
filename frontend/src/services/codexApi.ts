@@ -16,6 +16,9 @@ export interface LeaderboardEntry {
   leetcode_easy: number;
   leetcode_medium: number;
   leetcode_hard: number;
+  codeforces_solved?: number;
+  codechef_solved?: number;
+  gfg_solved?: number;
   tuf_solved: number;
   github_contributions: number;
   raw_github_commits: number;
@@ -68,6 +71,9 @@ export async function getDailyLeaderboard(): Promise<LeaderboardEntry[]> {
       leetcode_easy,
       leetcode_medium,
       leetcode_hard,
+      codeforces_solved,
+      codechef_solved,
+      gfg_solved,
       tuf_solved,
       github_contributions,
       raw_github_commits,
