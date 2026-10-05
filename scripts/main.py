@@ -164,7 +164,7 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
 
     if gh_handle and gh_data:
         gh_commits = gh_data.get("github_contributions", 0)
-        if gh_commits == 0 and yesterday_snap and yesterday_snap.get("raw_github_commits", 0) > 0:
+        if yesterday_snap and gh_commits < yesterday_snap.get("raw_github_commits", 0):
             snapshot.update({
                 "github_contributions": yesterday_snap.get("raw_github_commits", 0),
                 "github_repos": yesterday_snap.get("github_repos", 0),
@@ -181,7 +181,7 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
 
     if cf_handle and cf_data:
         cf_solved = cf_data.get("codeforces_solved", 0)
-        if cf_solved == 0 and yesterday_snap and yesterday_snap.get("codeforces_solved", 0) > 0:
+        if yesterday_snap and cf_solved < yesterday_snap.get("codeforces_solved", 0):
             snapshot.update({
                 "codeforces_rating": yesterday_snap.get("codeforces_rating", 0),
                 "codeforces_max_rating": yesterday_snap.get("codeforces_max_rating", 0),
@@ -202,7 +202,7 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
 
     if lc_handle and lc_data:
         lc_total = lc_data.get("leetcode_total", 0)
-        if lc_total == 0 and yesterday_snap and yesterday_snap.get("leetcode_total", 0) > 0:
+        if yesterday_snap and lc_total < yesterday_snap.get("leetcode_total", 0):
             snapshot.update({
                 "leetcode_easy": yesterday_snap.get("leetcode_easy", 0),
                 "leetcode_medium": yesterday_snap.get("leetcode_medium", 0),
@@ -232,7 +232,7 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
 
     if cc_handle and cc_data:
         cc_solved = cc_data.get("codechef_solved", 0)
-        if cc_solved == 0 and yesterday_snap and yesterday_snap.get("codechef_solved", 0) > 0:
+        if yesterday_snap and cc_solved < yesterday_snap.get("codechef_solved", 0):
             snapshot.update({
                 "codechef_rating": yesterday_snap.get("codechef_rating", 0),
                 "codechef_max_rating": yesterday_snap.get("codechef_max_rating", 0),
@@ -255,7 +255,7 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
 
     if gfg_handle and gfg_data:
         gfg_solved = gfg_data.get("gfg_solved", 0)
-        if gfg_solved == 0 and yesterday_snap and yesterday_snap.get("gfg_solved", 0) > 0:
+        if yesterday_snap and gfg_solved < yesterday_snap.get("gfg_solved", 0):
             snapshot.update({
                 "gfg_solved": yesterday_snap.get("gfg_solved", 0),
                 "gfg_score": yesterday_snap.get("gfg_score", 0),
@@ -281,7 +281,7 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
 
     if hr_handle and hr_data:
         hr_badges = hr_data.get("hackerrank_badges", 0)
-        if hr_badges == 0 and yesterday_snap and yesterday_snap.get("hackerrank_badges", 0) > 0:
+        if yesterday_snap and hr_badges < yesterday_snap.get("hackerrank_badges", 0):
             snapshot["hackerrank_badges"] = yesterday_snap.get("hackerrank_badges", 0)
         else:
             snapshot["hackerrank_badges"] = hr_badges
@@ -290,7 +290,7 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
 
     if tuf_handle and tuf_data:
         tuf_solved = tuf_data.get("tuf_solved", 0)
-        if tuf_solved == 0 and yesterday_snap and yesterday_snap.get("tuf_solved", 0) > 0:
+        if yesterday_snap and tuf_solved < yesterday_snap.get("tuf_solved", 0):
             snapshot.update({
                 "tuf_solved": yesterday_snap.get("tuf_solved", 0),
                 "tuf_easy": yesterday_snap.get("tuf_easy", 0),
