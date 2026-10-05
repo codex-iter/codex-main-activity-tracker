@@ -1,12 +1,10 @@
 import asyncio
 import logging
 import aiohttp
-import os
 
 log = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 15
-PROXY_URL = os.getenv("RESIDENTIAL_PROXY_URL")
 
 BROWSER_HEADERS = {
     "User-Agent": (
@@ -40,7 +38,7 @@ async def safe_fetch(
         try:
             if method.upper() == "POST":
                 async with session.post(
-                    url, headers=merged_headers, json=json_body, timeout=timeout, proxy=PROXY_URL
+                    url, headers=merged_headers, json=json_body, timeout=timeout
                 ) as resp:
                     if resp.status == 429:
                         log.warning("    HTTP 429 fetching %s (Attempt %d/%d) — Retrying...", url, attempt + 1, max_retries)
@@ -50,7 +48,7 @@ async def safe_fetch(
                     return await resp.json(content_type=None)
             else:
                 async with session.get(
-                    url, headers=merged_headers, timeout=timeout, proxy=PROXY_URL
+                    url, headers=merged_headers, timeout=timeout
                 ) as resp:
                     if resp.status == 429:
                         log.warning("    HTTP 429 fetching %s (Attempt %d/%d) — Retrying...", url, attempt + 1, max_retries)
