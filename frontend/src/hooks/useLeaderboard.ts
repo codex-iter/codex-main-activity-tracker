@@ -17,7 +17,7 @@ export interface LeaderboardMember {
   tuf_handle: string | null;
   tuf_solved: number;
   contests_attended: number;
-  github_contributions: number;
+  valid_github_commits: number;
   codeforces_rating: number;
   codechef_rating: number;
   hackerrank_badges: number;
@@ -67,7 +67,7 @@ export function useLeaderboard() {
             tuf_handle: entry.members.tuf_handle,
             tuf_solved: entry.tuf_solved || 0,
             contests_attended: entry.contests_attended,
-            github_contributions: entry.github_contributions,
+            valid_github_commits: entry.valid_github_commits,
             codeforces_rating: entry.codeforces_rating,
             codechef_rating: entry.codechef_rating,
             hackerrank_badges: entry.hackerrank_badges,

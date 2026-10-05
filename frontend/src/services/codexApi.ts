@@ -18,6 +18,8 @@ export interface LeaderboardEntry {
   leetcode_hard: number;
   tuf_solved: number;
   github_contributions: number;
+  raw_github_commits: number;
+  valid_github_commits: number;
   codeforces_rating: number;
   codechef_rating: number;
   hackerrank_badges: number;
@@ -68,6 +70,8 @@ export async function getDailyLeaderboard(): Promise<LeaderboardEntry[]> {
       leetcode_hard,
       tuf_solved,
       github_contributions,
+      raw_github_commits,
+      valid_github_commits,
       codeforces_rating,
       codechef_rating,
       hackerrank_badges,
@@ -255,6 +259,8 @@ export interface MemberSnapshot {
   gfg_medium: number;
   gfg_hard: number;
   github_contributions: number;
+  raw_github_commits: number;
+  valid_github_commits: number;
   github_prs: number;
   github_issues: number;
   codeforces_rating: number;
@@ -329,7 +335,7 @@ export async function getMemberProfile(handle: string): Promise<MemberProfile | 
          leetcode_easy, leetcode_medium, leetcode_hard, leetcode_total,
          leetcode_rating, leetcode_max_rating,
          gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard, gfg_solved, gfg_score,
-         github_contributions, github_prs, github_issues, codeforces_rating, codeforces_max_rating, codeforces_solved,
+         github_contributions, raw_github_commits, valid_github_commits, github_prs, github_issues, codeforces_rating, codeforces_max_rating, codeforces_solved,
          codechef_rating, codechef_max_rating, codechef_solved,
          tuf_solved, tuf_easy, tuf_medium, tuf_hard,
          hackerrank_badges, contests_attended, leetcode_contests, codeforces_contests, codechef_contests, topic_stats, badges_detail`
@@ -403,6 +409,8 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
         gfg_solved,
         tuf_solved,
         github_contributions,
+        raw_github_commits,
+        valid_github_commits,
         github_prs,
         current_streak
       `)
@@ -468,7 +476,7 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
         monthly_dsa_score: Math.max(0, (latest.dsa_score || 0) - (baseline.dsa_score || 0)),
         monthly_dev_score: Math.max(0, (latest.dev_score || 0) - (baseline.dev_score || 0)),
         monthly_problems_solved: Math.max(0, latestSolved - baseSolved),
-        monthly_commits: Math.max(0, (latest.github_contributions || 0) - (baseline.github_contributions || 0)),
+        monthly_commits: Math.max(0, (latest.valid_github_commits || 0) - (baseline.valid_github_commits || 0)),
         monthly_prs: Math.max(0, (latest.github_prs || 0) - (baseline.github_prs || 0)),
         current_streak: latest.current_streak || 0,
       });

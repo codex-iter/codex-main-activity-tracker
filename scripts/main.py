@@ -243,8 +243,15 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
 
     # Anti-spam commit delta calculation
     today_raw = snapshot.get("github_contributions", 0)
-    yesterday_raw = yesterday_snap.get("raw_github_commits", 0) if yesterday_snap else 0
-    yesterday_valid = yesterday_snap.get("valid_github_commits", 0) if yesterday_snap else 0
+    
+    if yesterday_snap:
+        # Fallback for migration: if raw_github_commits is 0, use old github_contributions
+        yesterday_raw = yesterday_snap.get("raw_github_commits") or yesterday_snap.get("github_contributions", 0)
+        yesterday_valid = yesterday_snap.get("valid_github_commits") or yesterday_snap.get("github_contributions", 0)
+    else:
+        # First time user: initialize baseline without capping entire history
+        yesterday_raw = today_raw
+        yesterday_valid = today_raw
 
     daily_commits = max(0, today_raw - yesterday_raw)
     capped_daily_commits = min(15, daily_commits)
