@@ -74,7 +74,7 @@ def calculate_score(snapshot: dict) -> dict:
     # 2. DEV SCORE (Max 500 Points)
     # ---------------------------------------------------------
     # Commits (Max 200 pts) - Target: 1000 commits
-    gh_commits = snapshot.get("github_contributions") or 0
+    gh_commits = snapshot.get("valid_github_commits") or 0
     commits_pts = min(200.0, (gh_commits / 1000.0) * 200.0)
 
     # Repos (Max 50 pts) - Target: 20 repos

@@ -112,6 +112,7 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
     snapshot = {
         "member_id": member_id,
         "snapshot_date": today,
+        "raw_github_commits": 0, "valid_github_commits": 0,
         "github_contributions": 0, "github_repos": 0, "github_prs": 0, "github_issues": 0,
         "codeforces_rating": 0, "codeforces_solved": 0, "codeforces_max_rating": 0, "codeforces_rank_title": "Unrated",
         "leetcode_easy": 0, "leetcode_medium": 0, "leetcode_hard": 0, "leetcode_total": 0,
@@ -239,6 +240,17 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
     recent_snapshots = get_recent_snapshots(supabase_client, member_id, today, limit=2)
     yesterday_snap = recent_snapshots[0] if len(recent_snapshots) > 0 else None
     day_before_snap = recent_snapshots[1] if len(recent_snapshots) > 1 else None
+
+    # Anti-spam commit delta calculation
+    today_raw = snapshot.get("github_contributions", 0)
+    yesterday_raw = yesterday_snap.get("raw_github_commits", 0) if yesterday_snap else 0
+    yesterday_valid = yesterday_snap.get("valid_github_commits", 0) if yesterday_snap else 0
+
+    daily_commits = max(0, today_raw - yesterday_raw)
+    capped_daily_commits = min(15, daily_commits)
+
+    snapshot["raw_github_commits"] = today_raw
+    snapshot["valid_github_commits"] = yesterday_valid + capped_daily_commits
 
     if yesterday_snap and yesterday_snap.get("snapshot_date") == yesterday_str:
         yesterday_total = calculate_total_activity(yesterday_snap)
