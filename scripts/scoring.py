@@ -36,7 +36,7 @@ def calculate_score(snapshot: dict) -> dict:
     cf_solved = snapshot.get("codeforces_solved") or 0
     cf_solved_pts = min(50.0, (cf_solved / 250.0) * 50.0)
 
-    # GFG/CodeChef/TUF/HackerRank (Max 25 pts) - Target: 300 combined
+    # GFG/CodeChef/HackerRank (Max 25 pts) - Target: 300 combined
     gfg_weight = (
         (snapshot.get("gfg_school") or 0) * 0.0 +
         (snapshot.get("gfg_basic") or 0) * 0.5 +
@@ -47,18 +47,10 @@ def calculate_score(snapshot: dict) -> dict:
     if gfg_weight == 0 and (snapshot.get("gfg_solved") or 0) > 0:
         gfg_weight = (snapshot.get("gfg_solved") or 0) * 1.5
 
-    tuf_weight = (
-        (snapshot.get("tuf_easy") or 0) * 1.0 +
-        (snapshot.get("tuf_medium") or 0) * 3.0 +
-        (snapshot.get("tuf_hard") or 0) * 6.0
-    )
-    if tuf_weight == 0 and (snapshot.get("tuf_solved") or 0) > 0:
-        tuf_weight = (snapshot.get("tuf_solved") or 0) * 1.5
-
     cc_solved = (snapshot.get("codechef_solved") or 0) * 2.0
     hr_badges = snapshot.get("hackerrank_badges") or 0
 
-    other_volume = gfg_weight + tuf_weight + cc_solved + (hr_badges * 5.0)
+    other_volume = gfg_weight + cc_solved + (hr_badges * 5.0)
     other_volume_pts = min(25.0, (other_volume / 300.0) * 25.0)
 
     solved_score = lc_solved_pts + cf_solved_pts + other_volume_pts

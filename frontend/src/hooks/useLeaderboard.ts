@@ -19,8 +19,6 @@ export interface LeaderboardMember {
   leetcode_total: number;
   total_solved: number;
   total_contributions: number;
-  tuf_handle: string | null;
-  tuf_solved: number;
   contests_attended: number;
   valid_github_commits: number;
   codeforces_rating: number;
@@ -92,8 +90,6 @@ export function useLeaderboard() {
               leetcode_total: entry.leetcode_total,
               total_solved: calculatedTotalSolved,
               total_contributions: calculatedContributions,
-              tuf_handle: entry.members.tuf_handle,
-              tuf_solved: 0,
               contests_attended: entry.contests_attended,
               valid_github_commits: entry.valid_github_commits,
               codeforces_rating: entry.codeforces_rating,

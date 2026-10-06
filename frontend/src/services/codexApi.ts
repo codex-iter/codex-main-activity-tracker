@@ -19,7 +19,6 @@ export interface LeaderboardEntry {
   codeforces_solved?: number;
   codechef_solved?: number;
   gfg_solved?: number;
-  tuf_solved: number;
   github_contributions: number;
   raw_github_commits: number;
   valid_github_commits: number;
@@ -33,7 +32,6 @@ export interface LeaderboardEntry {
     roll_number: string | null;
     avatar_url: string | null;
     github_handle: string | null;
-    tuf_handle: string | null;
   };
 }
 
@@ -74,7 +72,6 @@ export async function getDailyLeaderboard(): Promise<LeaderboardEntry[]> {
       codeforces_solved,
       codechef_solved,
       gfg_solved,
-      tuf_solved,
       github_contributions,
       raw_github_commits,
       valid_github_commits,
@@ -274,10 +271,6 @@ export interface MemberSnapshot {
   codechef_rating: number;
   codechef_max_rating: number;
   codechef_solved: number;
-  tuf_solved: number;
-  tuf_easy: number;
-  tuf_medium: number;
-  tuf_hard: number;
   leetcode_rating: number;
   leetcode_max_rating: number;
   gfg_solved: number;
@@ -302,7 +295,6 @@ export interface MemberProfile {
   codechef_handle: string | null;
   gfg_handle: string | null;
   hackerrank_handle: string | null;
-  tuf_handle: string | null;
   bio: string | null;
   linkedin_url: string | null;
   github_url: string | null;
@@ -319,7 +311,7 @@ export async function getMemberProfile(handle: string): Promise<MemberProfile | 
     const { data: members, error } = await supabase
       .from("members")
       .select(
-        "id, full_name, roll_number, avatar_url, github_handle, leetcode_handle, codeforces_handle, codechef_handle, gfg_handle, hackerrank_handle, tuf_handle, bio, linkedin_url, github_url, portfolio_url"
+        "id, full_name, roll_number, avatar_url, github_handle, leetcode_handle, codeforces_handle, codechef_handle, gfg_handle, hackerrank_handle, bio, linkedin_url, github_url, portfolio_url"
       )
       .eq(field, handle)
       .limit(1);
@@ -342,7 +334,6 @@ export async function getMemberProfile(handle: string): Promise<MemberProfile | 
          gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard, gfg_solved, gfg_score,
          github_contributions, raw_github_commits, valid_github_commits, github_prs, github_issues, codeforces_rating, codeforces_max_rating, codeforces_solved,
          codechef_rating, codechef_max_rating, codechef_solved,
-         tuf_solved, tuf_easy, tuf_medium, tuf_hard,
          hackerrank_badges, contests_attended, leetcode_contests, codeforces_contests, codechef_contests, topic_stats, badges_detail`
       )
       .eq("member_id", member.id)
@@ -414,7 +405,6 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
         codeforces_solved,
         codechef_solved,
         gfg_solved,
-        tuf_solved,
         github_contributions,
         raw_github_commits,
         valid_github_commits,

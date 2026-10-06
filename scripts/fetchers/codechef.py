@@ -36,7 +36,7 @@ async def fetch_codechef(session: aiohttp.ClientSession, handle: str) -> dict:
             await asyncio.sleep(0.5)
             stats_resp = await safe_fetch(session, f"{BASE}/stats")
         finally:
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(2.0)
 
     # 1. Profile summary
     profile = profile_resp.get("data") or {}
