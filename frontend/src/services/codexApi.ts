@@ -380,9 +380,11 @@ export interface MonthlyLeaderboardEntry {
 export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]> {
   try {
     const now = new Date();
+    // Get the last day of the previous month in UTC to use as the true baseline
     const year = now.getUTCFullYear();
-    const month = String(now.getUTCMonth() + 1).padStart(2, "0");
-    const monthStart = `${year}-${month}-01`;
+    const month = now.getUTCMonth(); // 0-indexed
+    const lastDayPrevMonth = new Date(Date.UTC(year, month, 0));
+    const lastDayStr = lastDayPrevMonth.toISOString().split("T")[0];
 
     // Step B: Query active members
     const { data: members, error: membersError } = await supabase
@@ -419,7 +421,7 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
         github_prs,
         current_streak
       `)
-      .gte("snapshot_date", monthStart)
+      .gte("snapshot_date", lastDayStr)
       .in("member_id", memberIds)
       .order("snapshot_date", { ascending: true });
 
