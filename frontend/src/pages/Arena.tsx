@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import SEO from "../components/SEO";
 import { ScrollReveal } from "../components/animations/ScrollReveal";
@@ -321,75 +322,80 @@ export default function Arena() {
                       const xpGap = scoreAhead !== null ? Math.ceil(scoreAhead - (member.monthly_dsa_score || 0) + 1) : 0;
 
                       return (
-                        <motion.div
+                        <Link
                           key={member.member_id}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.04 }}
-                          className={`p-4 sm:p-5 flex flex-col gap-3 transition-all rounded-none ${style.border} ${style.bg} ${style.textColor} ${style.shadow} ${
-                            rank <= 3 ? "scale-[1.02] z-10" : "hover:-translate-y-1"
-                          }`}
+                          to={`/profile/${member.handle}`}
+                          className="block group cursor-pointer"
                         >
-                          {/* Top Row: Rank title & Streak Badge */}
-                          <div className="flex items-center justify-between border-b border-slate-900/20 pb-2">
-                            <span className={`text-[10px] font-mono font-black px-2 py-0.5 uppercase border border-slate-900 ${titleInfo.color}`}>
-                              {titleInfo.title}
-                            </span>
-                            {streakBadge && (
-                              <span className={`text-[10px] font-mono px-2 py-0.5 uppercase border border-slate-900 ${streakBadge.style}`}>
-                                {streakBadge.label} ({member.current_streak}d)
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.04 }}
+                            className={`p-4 sm:p-5 flex flex-col gap-3 transition-all rounded-none ${style.border} ${style.bg} ${style.textColor} ${style.shadow} ${
+                              rank <= 3 ? "scale-[1.02] z-10 group-hover:scale-[1.03]" : "group-hover:-translate-y-1"
+                            }`}
+                          >
+                            {/* Top Row: Rank title & Streak Badge */}
+                            <div className="flex items-center justify-between border-b border-slate-900/20 pb-2">
+                              <span className={`text-[10px] font-mono font-black px-2 py-0.5 uppercase border border-slate-900 ${titleInfo.color}`}>
+                                {titleInfo.title}
                               </span>
+                              {streakBadge && (
+                                <span className={`text-[10px] font-mono px-2 py-0.5 uppercase border border-slate-900 ${streakBadge.style}`}>
+                                  {streakBadge.label} ({member.current_streak}d)
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between min-w-0">
+                              <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1 pr-2">
+                                {/* Rank Badge */}
+                                <div className={`px-2.5 py-1 text-xs sm:text-sm font-black uppercase font-mono border-2 border-slate-900 flex-shrink-0 ${style.badgeBg}`}>
+                                  {style.badgeIcon}
+                                </div>
+
+                                {/* Avatar / Initials */}
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 border-2 border-slate-900 bg-white overflow-hidden flex-shrink-0 flex items-center justify-center font-black text-slate-900 text-base sm:text-xl">
+                                  {member.avatar_url ? (
+                                    <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    member.full_name?.charAt(0).toUpperCase()
+                                  )}
+                                </div>
+
+                                {/* Member Info */}
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-black text-base sm:text-2xl truncate uppercase tracking-tight">
+                                    {member.full_name}
+                                  </div>
+                                  <div className={`text-xs sm:text-sm font-bold font-mono mt-0.5 ${style.subText}`}>
+                                    SOLVED: <span className="font-black">{member.monthly_problems_solved || 0}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* XP Score */}
+                              <div className="text-right flex-shrink-0 pl-2">
+                                <div className="text-2xl sm:text-5xl font-black font-mono leading-none">
+                                  {Math.floor(member.monthly_dsa_score || 0)}
+                                </div>
+                                <div className={`text-[9px] sm:text-xs font-mono font-bold uppercase tracking-widest mt-1 ${style.subText}`}>
+                                  DSA XP
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Bottom Row: Threat Radar XP Gap Counter */}
+                            {rank > 1 && xpGap > 0 && (
+                              <div className="pt-2 border-t border-slate-900/10 flex items-center justify-between text-[11px] font-mono font-bold">
+                                <span className="opacity-80">THREAT RADAR:</span>
+                                <span className="text-red-700 bg-red-100 px-2 py-0.5 border border-red-900">
+                                  +{xpGap} XP TO OVERTAKE #{rank - 1}
+                                </span>
+                              </div>
                             )}
-                          </div>
-
-                          <div className="flex items-center justify-between min-w-0">
-                            <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1 pr-2">
-                              {/* Rank Badge */}
-                              <div className={`px-2.5 py-1 text-xs sm:text-sm font-black uppercase font-mono border-2 border-slate-900 flex-shrink-0 ${style.badgeBg}`}>
-                                {style.badgeIcon}
-                              </div>
-
-                              {/* Avatar / Initials */}
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 border-2 border-slate-900 bg-white overflow-hidden flex-shrink-0 flex items-center justify-center font-black text-slate-900 text-base sm:text-xl">
-                                {member.avatar_url ? (
-                                  <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  member.full_name?.charAt(0).toUpperCase()
-                                )}
-                              </div>
-
-                              {/* Member Info */}
-                              <div className="min-w-0 flex-1">
-                                <div className="font-black text-base sm:text-2xl truncate uppercase tracking-tight">
-                                  {member.full_name}
-                                </div>
-                                <div className={`text-xs sm:text-sm font-bold font-mono mt-0.5 ${style.subText}`}>
-                                  SOLVED: <span className="font-black">{member.monthly_problems_solved || 0}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* XP Score */}
-                            <div className="text-right flex-shrink-0 pl-2">
-                              <div className="text-2xl sm:text-5xl font-black font-mono leading-none">
-                                {Math.floor(member.monthly_dsa_score || 0)}
-                              </div>
-                              <div className={`text-[9px] sm:text-xs font-mono font-bold uppercase tracking-widest mt-1 ${style.subText}`}>
-                                DSA XP
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Bottom Row: Threat Radar XP Gap Counter */}
-                          {rank > 1 && xpGap > 0 && (
-                            <div className="pt-2 border-t border-slate-900/10 flex items-center justify-between text-[11px] font-mono font-bold">
-                              <span className="opacity-80">THREAT RADAR:</span>
-                              <span className="text-red-700 bg-red-100 px-2 py-0.5 border border-red-900">
-                                +{xpGap} XP TO OVERTAKE #{rank - 1}
-                              </span>
-                            </div>
-                          )}
-                        </motion.div>
+                          </motion.div>
+                        </Link>
                       );
                     })}
                   </div>
@@ -426,75 +432,80 @@ export default function Arena() {
                       const xpGap = scoreAhead !== null ? Math.ceil(scoreAhead - (member.monthly_dev_score || 0) + 1) : 0;
 
                       return (
-                        <motion.div
+                        <Link
                           key={member.member_id}
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.04 }}
-                          className={`p-4 sm:p-5 flex flex-col gap-3 transition-all rounded-none ${style.border} ${style.bg} ${style.textColor} ${style.shadow} ${
-                            rank <= 3 ? "scale-[1.02] z-10" : "hover:-translate-y-1"
-                          }`}
+                          to={`/profile/${member.handle}`}
+                          className="block group cursor-pointer"
                         >
-                          {/* Top Row: Rank title & Streak Badge */}
-                          <div className="flex items-center justify-between border-b border-slate-900/20 pb-2">
-                            <span className={`text-[10px] font-mono font-black px-2 py-0.5 uppercase border border-slate-900 ${titleInfo.color}`}>
-                              {titleInfo.title}
-                            </span>
-                            {streakBadge && (
-                              <span className={`text-[10px] font-mono px-2 py-0.5 uppercase border border-slate-900 ${streakBadge.style}`}>
-                                {streakBadge.label} ({member.current_streak}d)
+                          <motion.div
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.04 }}
+                            className={`p-4 sm:p-5 flex flex-col gap-3 transition-all rounded-none ${style.border} ${style.bg} ${style.textColor} ${style.shadow} ${
+                              rank <= 3 ? "scale-[1.02] z-10 group-hover:scale-[1.03]" : "group-hover:-translate-y-1"
+                            }`}
+                          >
+                            {/* Top Row: Rank title & Streak Badge */}
+                            <div className="flex items-center justify-between border-b border-slate-900/20 pb-2">
+                              <span className={`text-[10px] font-mono font-black px-2 py-0.5 uppercase border border-slate-900 ${titleInfo.color}`}>
+                                {titleInfo.title}
                               </span>
+                              {streakBadge && (
+                                <span className={`text-[10px] font-mono px-2 py-0.5 uppercase border border-slate-900 ${streakBadge.style}`}>
+                                  {streakBadge.label} ({member.current_streak}d)
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between min-w-0">
+                              <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1 pr-2">
+                                {/* Rank Badge */}
+                                <div className={`px-2.5 py-1 text-xs sm:text-sm font-black uppercase font-mono border-2 border-slate-900 flex-shrink-0 ${style.badgeBg}`}>
+                                  {style.badgeIcon}
+                                </div>
+
+                                {/* Avatar / Initials */}
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 border-2 border-slate-900 bg-white overflow-hidden flex-shrink-0 flex items-center justify-center font-black text-slate-900 text-base sm:text-xl">
+                                  {member.avatar_url ? (
+                                    <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    member.full_name?.charAt(0).toUpperCase()
+                                  )}
+                                </div>
+
+                                {/* Member Info */}
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-black text-base sm:text-2xl truncate uppercase tracking-tight">
+                                    {member.full_name}
+                                  </div>
+                                  <div className={`text-xs sm:text-sm font-bold font-mono mt-0.5 ${style.subText}`}>
+                                    COMMITS: <span className="font-black">{member.monthly_commits || 0}</span> | PRS: <span className="font-black">{member.monthly_prs || 0}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* XP Score */}
+                              <div className="text-right flex-shrink-0 pl-2">
+                                <div className="text-2xl sm:text-5xl font-black font-mono leading-none">
+                                  {Math.floor(member.monthly_dev_score || 0)}
+                                </div>
+                                <div className={`text-[9px] sm:text-xs font-mono font-bold uppercase tracking-widest mt-1 ${style.subText}`}>
+                                  DEV XP
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Bottom Row: Threat Radar XP Gap Counter */}
+                            {rank > 1 && xpGap > 0 && (
+                              <div className="pt-2 border-t border-slate-900/10 flex items-center justify-between text-[11px] font-mono font-bold">
+                                <span className="opacity-80">THREAT RADAR:</span>
+                                <span className="text-blue-900 bg-blue-100 px-2 py-0.5 border border-blue-900">
+                                  +{xpGap} XP TO OVERTAKE #{rank - 1}
+                                </span>
+                              </div>
                             )}
-                          </div>
-
-                          <div className="flex items-center justify-between min-w-0">
-                            <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1 pr-2">
-                              {/* Rank Badge */}
-                              <div className={`px-2.5 py-1 text-xs sm:text-sm font-black uppercase font-mono border-2 border-slate-900 flex-shrink-0 ${style.badgeBg}`}>
-                                {style.badgeIcon}
-                              </div>
-
-                              {/* Avatar / Initials */}
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 border-2 border-slate-900 bg-white overflow-hidden flex-shrink-0 flex items-center justify-center font-black text-slate-900 text-base sm:text-xl">
-                                {member.avatar_url ? (
-                                  <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  member.full_name?.charAt(0).toUpperCase()
-                                )}
-                              </div>
-
-                              {/* Member Info */}
-                              <div className="min-w-0 flex-1">
-                                <div className="font-black text-base sm:text-2xl truncate uppercase tracking-tight">
-                                  {member.full_name}
-                                </div>
-                                <div className={`text-xs sm:text-sm font-bold font-mono mt-0.5 ${style.subText}`}>
-                                  COMMITS: <span className="font-black">{member.monthly_commits || 0}</span> | PRS: <span className="font-black">{member.monthly_prs || 0}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* XP Score */}
-                            <div className="text-right flex-shrink-0 pl-2">
-                              <div className="text-2xl sm:text-5xl font-black font-mono leading-none">
-                                {Math.floor(member.monthly_dev_score || 0)}
-                              </div>
-                              <div className={`text-[9px] sm:text-xs font-mono font-bold uppercase tracking-widest mt-1 ${style.subText}`}>
-                                DEV XP
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Bottom Row: Threat Radar XP Gap Counter */}
-                          {rank > 1 && xpGap > 0 && (
-                            <div className="pt-2 border-t border-slate-900/10 flex items-center justify-between text-[11px] font-mono font-bold">
-                              <span className="opacity-80">THREAT RADAR:</span>
-                              <span className="text-blue-900 bg-blue-100 px-2 py-0.5 border border-blue-900">
-                                +{xpGap} XP TO OVERTAKE #{rank - 1}
-                              </span>
-                            </div>
-                          )}
-                        </motion.div>
+                          </motion.div>
+                        </Link>
                       );
                     })}
                   </div>
@@ -543,7 +554,7 @@ export default function Arena() {
                   <div className="space-y-2 font-mono text-xs">
                     <div className="bg-red-100 border border-red-900 p-2.5 text-red-950">
                       <div className="font-bold">⚔️ ALGORITHMS (DSA) SCORE:</div>
-                      <div>Total Problems Solved aggregated across all platform profiles (LeetCode + Codeforces + CodeChef + GFG + TUF) in the current month.</div>
+                      <div>Total Problems Solved aggregated across all platform profiles (LeetCode + Codeforces + CodeChef + GFG) in the current month.</div>
                     </div>
                     <div className="bg-blue-100 border border-blue-900 p-2.5 text-blue-950">
                       <div className="font-bold">🛠️ DEVELOPMENT SCORE:</div>

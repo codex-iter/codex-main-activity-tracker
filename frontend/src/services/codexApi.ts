@@ -87,8 +87,7 @@ export async function getDailyLeaderboard(): Promise<LeaderboardEntry[]> {
         full_name,
         roll_number,
         avatar_url,
-        github_handle,
-        tuf_handle
+        github_handle
       )
     `
     )
@@ -121,7 +120,7 @@ function countToLevel(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
   if (count === 0 || max === 0) return 0;
   const ratio = count / max;
   if (ratio <= 0.25) return 1;
-  if (ratio <= 0.5)  return 2;
+  if (ratio <= 0.5) return 2;
   if (ratio <= 0.75) return 3;
   return 4;
 }
@@ -167,7 +166,7 @@ export async function getClubGithubHeatmap(): Promise<ActivityDay[]> {
   }
 
   const rows = (data ?? []) as { date: string; commits: number }[];
-  
+
   // Custom level scaling based on collective club volume
   const getLevel = (commits: number) => {
     if (commits === 0) return 0;
@@ -442,7 +441,7 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
 
     for (const member of members) {
       const memberSnaps = snapshotsByMember.get(member.id) || [];
-      
+
       if (memberSnaps.length === 0) {
         results.push({
           member_id: member.id,
@@ -463,27 +462,29 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
       const baseline = memberSnaps[0];
       const latest = memberSnaps[memberSnaps.length - 1];
 
-      const calcTotalSolved = (s: any) => 
-        (s.leetcode_total || 0) + 
-        (s.codeforces_solved || 0) + 
-        (s.codechef_solved || 0) + 
-        (s.gfg_solved || 0) + 
-        (s.tuf_solved || 0);
+      const calcTotalSolved = (s: any) =>
+        (s.leetcode_total || 0) +
+        (s.codeforces_solved || 0) +
+        (s.codechef_solved || 0) +
+        (s.gfg_solved || 0);
 
       const baseSolved = calcTotalSolved(baseline);
       const latestSolved = calcTotalSolved(latest);
+
+      // If only 1 snapshot exists in this month (e.g. baseline is latest), delta is 0
+      const isSingleSnap = memberSnaps.length <= 1;
 
       results.push({
         member_id: member.id,
         full_name: member.full_name,
         handle: member.github_handle || member.id,
         avatar_url: member.avatar_url,
-        monthly_total_score: Math.max(0, (latest.total_score || 0) - (baseline.total_score || 0)),
-        monthly_dsa_score: Math.max(0, (latest.dsa_score || 0) - (baseline.dsa_score || 0)),
-        monthly_dev_score: Math.max(0, (latest.dev_score || 0) - (baseline.dev_score || 0)),
-        monthly_problems_solved: Math.max(0, latestSolved - baseSolved),
-        monthly_commits: Math.max(0, (latest.valid_github_commits || 0) - (baseline.valid_github_commits || 0)),
-        monthly_prs: Math.max(0, (latest.github_prs || 0) - (baseline.github_prs || 0)),
+        monthly_total_score: isSingleSnap ? 0 : Math.max(0, (latest.total_score || 0) - (baseline.total_score || 0)),
+        monthly_dsa_score: isSingleSnap ? 0 : Math.max(0, (latest.dsa_score || 0) - (baseline.dsa_score || 0)),
+        monthly_dev_score: isSingleSnap ? 0 : Math.max(0, (latest.dev_score || 0) - (baseline.dev_score || 0)),
+        monthly_problems_solved: isSingleSnap ? 0 : Math.max(0, latestSolved - baseSolved),
+        monthly_commits: isSingleSnap ? 0 : Math.max(0, (latest.valid_github_commits || 0) - (baseline.valid_github_commits || 0)),
+        monthly_prs: isSingleSnap ? 0 : Math.max(0, (latest.github_prs || 0) - (baseline.github_prs || 0)),
         current_streak: latest.current_streak || 0,
       });
     }
