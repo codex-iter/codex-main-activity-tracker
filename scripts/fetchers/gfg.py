@@ -18,9 +18,8 @@ async def fetch_gfg(session: aiohttp.ClientSession, handle: str) -> dict:
 
     async with gfg_semaphore:
         try:
-            summary_payload, heatmap_resp, stats_resp, rating_resp = await asyncio.gather(
+            summary_payload, stats_resp, rating_resp = await asyncio.gather(
                 safe_fetch(session, BASE),
-                safe_fetch(session, f"{BASE}/heatmap"),
                 safe_fetch(session, f"{BASE}/stats"),
                 safe_fetch(session, f"{BASE}/rating"),
             )
@@ -34,14 +33,7 @@ async def fetch_gfg(session: aiohttp.ClientSession, handle: str) -> dict:
         or summary_payload.get("totalProblemsSolved")
     )
 
-    # 2. Heatmap -> streak & submission counts
-    heatmap = heatmap_resp.get("data") or {}
-    gfg_total_subs = _safe_int(heatmap.get("totalSubmissions"))
-    gfg_current_streak = _safe_int(heatmap.get("currentStreak"))
-    gfg_max_streak = _safe_int(heatmap.get("longestStreak"))
-    gfg_active_days = _safe_int(heatmap.get("totalActiveDays"))
-
-    # 3. Difficulty breakdown + topics
+    # 2. Difficulty breakdown + topics
     stats_data = stats_resp.get("data") or {}
     by_diff = stats_data.get("byDifficulty") or {}
     gfg_school = _safe_int(by_diff.get("school"))
@@ -55,7 +47,7 @@ async def fetch_gfg(session: aiohttp.ClientSession, handle: str) -> dict:
         if item.get("topic")
     }
 
-    # 4. Rating (may be null for non-contest users)
+    # 3. Rating (may be null for non-contest users)
     rating_data = rating_resp.get("data") or {}
     _gfg_max_rating = _safe_int(rating_data.get("max"))
 
@@ -70,13 +62,9 @@ async def fetch_gfg(session: aiohttp.ClientSession, handle: str) -> dict:
         "gfg_easy": gfg_easy,
         "gfg_medium": gfg_medium,
         "gfg_hard": gfg_hard,
-        "gfg_active_days": gfg_active_days,
-        "gfg_total_submissions": gfg_total_subs,
-        "gfg_current_streak": gfg_current_streak,
-        "gfg_max_streak": gfg_max_streak,
         "gfg_max_rating": _gfg_max_rating,
         "gfg_topics": gfg_topics,
     }
-    log.info("    ✓ GFG          -> solved=%d streak=%d [S=%d B=%d E=%d M=%d H=%d]",
-             solved, gfg_current_streak, gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard)
+    log.info("    ✓ GFG          -> solved=%d [S=%d B=%d E=%d M=%d H=%d]",
+             solved, gfg_school, gfg_basic, gfg_easy, gfg_medium, gfg_hard)
     return result
