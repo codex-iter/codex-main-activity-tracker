@@ -69,8 +69,7 @@ export function useLeaderboard() {
               (entry.leetcode_total || 0) + 
               (entry.codeforces_solved || 0) + 
               (entry.codechef_solved || 0) + 
-              (entry.gfg_solved || 0) + 
-              (entry.tuf_solved || 0);
+              (entry.gfg_solved || 0);
 
             const calculatedContributions = 
               (entry.github_contributions || 0) || 
@@ -94,7 +93,7 @@ export function useLeaderboard() {
               total_solved: calculatedTotalSolved,
               total_contributions: calculatedContributions,
               tuf_handle: entry.members.tuf_handle,
-              tuf_solved: entry.tuf_solved || 0,
+              tuf_solved: 0,
               contests_attended: entry.contests_attended,
               valid_github_commits: entry.valid_github_commits,
               codeforces_rating: entry.codeforces_rating,
