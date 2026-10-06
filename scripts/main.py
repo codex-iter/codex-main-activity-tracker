@@ -346,11 +346,16 @@ async def sync_member_async(supabase_client, session: aiohttp.ClientSession, mem
 
     snapshot["max_streak"] = max(prev_max_streak, snapshot["current_streak"])
 
+    if yesterday_snap and snapshot["active_days"] < yesterday_snap.get("active_days", 0):
+        snapshot["active_days"] = yesterday_snap.get("active_days", 0)
+
     scores = calculate_score(snapshot)
     snapshot["total_score"] = scores["total_score"]
     snapshot["dsa_score"] = scores["dsa_score"]
     snapshot["dev_score"] = scores["dev_score"]
     log.info("  ✓ %s — Total: %.2f (DSA: %.2f | Dev: %.2f)", name, snapshot["total_score"], snapshot["dsa_score"], snapshot["dev_score"])
+
+    snapshot["_is_new_member"] = (len(recent_snapshots) == 0)
 
     return snapshot
 
@@ -367,6 +372,7 @@ async def run_sync() -> None:
 
     supabase_client = get_supabase_client()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    first_of_month = datetime.now(timezone.utc).replace(day=1).strftime("%Y-%m-%d")
 
     log.info("Fetching active members from Supabase...")
     members = get_active_members(supabase_client)
@@ -394,8 +400,17 @@ async def run_sync() -> None:
                     fail_count += 1
                     continue
                 try:
+                    is_new = result.pop("_is_new_member", False)
                     upsert_snapshot(supabase_client, result)
                     log.info("  ✓ Upserted snapshot for %s", name)
+                    
+                    if is_new and today != first_of_month:
+                        import copy
+                        baseline_copy = copy.deepcopy(result)
+                        baseline_copy["snapshot_date"] = first_of_month
+                        upsert_snapshot(supabase_client, baseline_copy)
+                        log.info("  ✓ Auto-seeded 1st-of-month baseline for new member %s", name)
+                        
                     success_count += 1
                 except Exception as exc:  # noqa: BLE001
                     log.error("  ✗ Supabase upsert failed for %s: %s", name, exc)
