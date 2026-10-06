@@ -29,11 +29,14 @@ async def fetch_codechef(session: aiohttp.ClientSession, handle: str) -> dict:
     async with cc_semaphore:
         try:
             profile_resp = await safe_fetch(session, BASE)
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1.5)  # Micro-delay between endpoints
+            
             heatmap_resp = await safe_fetch(session, f"{BASE}/heatmap")
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1.5)
+            
             contests_resp = await safe_fetch(session, f"{BASE}/contests")
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1.5)
+            
             stats_resp = await safe_fetch(session, f"{BASE}/stats")
         finally:
             await asyncio.sleep(2.0)
