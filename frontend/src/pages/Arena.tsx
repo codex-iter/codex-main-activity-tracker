@@ -227,7 +227,7 @@ export default function Arena() {
                     <div className="min-w-0">
                       <div className="text-[11px] font-mono font-black text-red-400 uppercase tracking-wide">⚔️ #1 ALGORITHMS LEADER</div>
                       <div className="text-lg sm:text-xl font-black truncate uppercase text-white">{topDsaLeader.full_name}</div>
-                      <div className="text-[10px] font-mono text-slate-300">{topDsaLeader.monthly_problems_solved || 0} PROBLEMS SOLVED</div>
+                      <div className="text-[10px] font-mono text-slate-300">SOLVED: {topDsaLeader.monthly_problems_solved || 0} (LC: {topDsaLeader.monthly_leetcode || 0} | CF: {topDsaLeader.monthly_codeforces || 0} | CC: {topDsaLeader.monthly_codechef || 0} | GFG: {topDsaLeader.monthly_gfg || 0})</div>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 pl-3 border-l border-red-800/80">
@@ -370,6 +370,12 @@ export default function Arena() {
                                   </div>
                                   <div className={`text-xs sm:text-sm font-bold font-mono mt-0.5 ${style.subText}`}>
                                     SOLVED: <span className="font-black">{member.monthly_problems_solved || 0}</span>
+                                  </div>
+                                  <div className={`text-[9px] sm:text-[10px] font-mono mt-0.5 ${style.subText} flex gap-2 opacity-90`}>
+                                    <span>LC:<span className="font-bold">{member.monthly_leetcode || 0}</span></span>
+                                    <span>CF:<span className="font-bold">{member.monthly_codeforces || 0}</span></span>
+                                    <span>CC:<span className="font-bold">{member.monthly_codechef || 0}</span></span>
+                                    <span>GFG:<span className="font-bold">{member.monthly_gfg || 0}</span></span>
                                   </div>
                                 </div>
                               </div>

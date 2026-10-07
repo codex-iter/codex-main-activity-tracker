@@ -365,6 +365,10 @@ export interface MonthlyLeaderboardEntry {
   monthly_problems_solved: number;
   monthly_commits: number;
   monthly_prs: number;
+  monthly_leetcode: number;
+  monthly_codeforces: number;
+  monthly_codechef: number;
+  monthly_gfg: number;
   current_streak: number;
 }
 
@@ -463,6 +467,10 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
       const isSingleSnap = memberSnaps.length <= 1;
 
       let monthly_problems_solved = 0;
+      let monthly_leetcode = 0;
+      let monthly_codeforces = 0;
+      let monthly_codechef = 0;
+      let monthly_gfg = 0;
       if (!isSingleSnap) {
         for (let i = 1; i < memberSnaps.length; i++) {
           const prev = memberSnaps[i - 1];
@@ -482,10 +490,16 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
             return delta;
           };
 
-          monthly_problems_solved += processPlatform(prev.leetcode_total, curr.leetcode_total);
-          monthly_problems_solved += processPlatform(prev.codeforces_solved, curr.codeforces_solved);
-          monthly_problems_solved += processPlatform(prev.codechef_solved, curr.codechef_solved);
-          monthly_problems_solved += processPlatform(prev.gfg_solved, curr.gfg_solved);
+          const lcDelta = processPlatform(prev.leetcode_total, curr.leetcode_total);
+          const cfDelta = processPlatform(prev.codeforces_solved, curr.codeforces_solved);
+          const ccDelta = processPlatform(prev.codechef_solved, curr.codechef_solved);
+          const gfgDelta = processPlatform(prev.gfg_solved, curr.gfg_solved);
+
+          monthly_leetcode += lcDelta;
+          monthly_codeforces += cfDelta;
+          monthly_codechef += ccDelta;
+          monthly_gfg += gfgDelta;
+          monthly_problems_solved += (lcDelta + cfDelta + ccDelta + gfgDelta);
         }
       }
 
@@ -503,6 +517,10 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
         monthly_problems_solved,
         monthly_commits,
         monthly_prs,
+        monthly_leetcode,
+        monthly_codeforces,
+        monthly_codechef,
+        monthly_gfg,
         current_streak: latest.current_streak || 0,
       });
     }
