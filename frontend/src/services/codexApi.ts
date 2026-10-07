@@ -460,7 +460,7 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
         (s.codechef_solved || 0) +
         (s.gfg_solved || 0);
         
-      const getCommits = (s: any) => s.valid_github_commits ?? s.github_contributions ?? 0;
+      const getCommits = (s: any) => s.valid_github_commits || s.github_contributions || 0;
 
       const baseSolved = calcTotalSolved(baseline);
       const latestSolved = calcTotalSolved(latest);
