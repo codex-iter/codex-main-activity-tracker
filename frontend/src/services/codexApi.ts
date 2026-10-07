@@ -459,6 +459,8 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
         (s.codeforces_solved || 0) +
         (s.codechef_solved || 0) +
         (s.gfg_solved || 0);
+        
+      const getCommits = (s: any) => s.valid_github_commits ?? s.github_contributions ?? 0;
 
       const baseSolved = calcTotalSolved(baseline);
       const latestSolved = calcTotalSolved(latest);
@@ -475,7 +477,7 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
         monthly_dsa_score: isSingleSnap ? 0 : Math.max(0, (latest.dsa_score || 0) - (baseline.dsa_score || 0)),
         monthly_dev_score: isSingleSnap ? 0 : Math.max(0, (latest.dev_score || 0) - (baseline.dev_score || 0)),
         monthly_problems_solved: isSingleSnap ? 0 : Math.max(0, latestSolved - baseSolved),
-        monthly_commits: isSingleSnap ? 0 : Math.max(0, (latest.valid_github_commits || 0) - (baseline.valid_github_commits || 0)),
+        monthly_commits: isSingleSnap ? 0 : Math.max(0, getCommits(latest) - getCommits(baseline)),
         monthly_prs: isSingleSnap ? 0 : Math.max(0, (latest.github_prs || 0) - (baseline.github_prs || 0)),
         current_streak: latest.current_streak || 0,
       });
