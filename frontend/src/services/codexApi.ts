@@ -454,11 +454,7 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
       const baseline = memberSnaps[0];
       const latest = memberSnaps[memberSnaps.length - 1];
 
-      const calcTotalSolved = (s: any) =>
-        (s.leetcode_total || 0) +
-        (s.codeforces_solved || 0) +
-        (s.codechef_solved || 0) +
-        (s.gfg_solved || 0);
+
         
       const getCommits = (s: any) => s.valid_github_commits || s.github_contributions || 0;
 
