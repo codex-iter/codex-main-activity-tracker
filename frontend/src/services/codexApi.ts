@@ -468,7 +468,33 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
       // If only 1 snapshot exists in this month (e.g. baseline is latest), delta is 0
       const isSingleSnap = memberSnaps.length <= 1;
 
-      const monthly_problems_solved = isSingleSnap ? 0 : Math.max(0, latestSolved - baseSolved);
+      let monthly_problems_solved = 0;
+      if (!isSingleSnap) {
+        for (let i = 1; i < memberSnaps.length; i++) {
+          const prev = memberSnaps[i - 1];
+          const curr = memberSnaps[i];
+          
+          const processPlatform = (pVal: number | undefined | null, cVal: number | undefined | null) => {
+            const p = pVal || 0;
+            const c = cVal || 0;
+            const delta = Math.max(0, c - p);
+            
+            // Backfill detection: If it jumps from 0 to a large number in one day, it's a scraper handle addition/fix
+            if (p === 0 && delta > 10) return 0;
+            
+            // Hard cap for daily spam or extreme glitches
+            if (delta > 30) return 30;
+            
+            return delta;
+          };
+
+          monthly_problems_solved += processPlatform(prev.leetcode_total, curr.leetcode_total);
+          monthly_problems_solved += processPlatform(prev.codeforces_solved, curr.codeforces_solved);
+          monthly_problems_solved += processPlatform(prev.codechef_solved, curr.codechef_solved);
+          monthly_problems_solved += processPlatform(prev.gfg_solved, curr.gfg_solved);
+        }
+      }
+
       const monthly_commits = isSingleSnap ? 0 : Math.max(0, getCommits(latest) - getCommits(baseline));
       const monthly_prs = isSingleSnap ? 0 : Math.max(0, (latest.github_prs || 0) - (baseline.github_prs || 0));
 
