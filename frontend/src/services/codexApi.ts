@@ -450,6 +450,10 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
           monthly_problems_solved: 0,
           monthly_commits: 0,
           monthly_prs: 0,
+          monthly_leetcode: 0,
+          monthly_codeforces: 0,
+          monthly_codechef: 0,
+          monthly_gfg: 0,
           current_streak: 0,
         });
         continue;
