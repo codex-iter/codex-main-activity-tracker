@@ -462,8 +462,6 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
         
       const getCommits = (s: any) => s.valid_github_commits || s.github_contributions || 0;
 
-      const baseSolved = calcTotalSolved(baseline);
-      const latestSolved = calcTotalSolved(latest);
 
       // If only 1 snapshot exists in this month (e.g. baseline is latest), delta is 0
       const isSingleSnap = memberSnaps.length <= 1;
