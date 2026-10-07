@@ -468,17 +468,21 @@ export async function getMonthlyLeaderboard(): Promise<MonthlyLeaderboardEntry[]
       // If only 1 snapshot exists in this month (e.g. baseline is latest), delta is 0
       const isSingleSnap = memberSnaps.length <= 1;
 
+      const monthly_problems_solved = isSingleSnap ? 0 : Math.max(0, latestSolved - baseSolved);
+      const monthly_commits = isSingleSnap ? 0 : Math.max(0, getCommits(latest) - getCommits(baseline));
+      const monthly_prs = isSingleSnap ? 0 : Math.max(0, (latest.github_prs || 0) - (baseline.github_prs || 0));
+
       results.push({
         member_id: member.id,
         full_name: member.full_name,
         handle: member.github_handle || member.id,
         avatar_url: member.avatar_url,
         monthly_total_score: isSingleSnap ? 0 : Math.max(0, (latest.total_score || 0) - (baseline.total_score || 0)),
-        monthly_dsa_score: isSingleSnap ? 0 : Math.max(0, (latest.dsa_score || 0) - (baseline.dsa_score || 0)),
-        monthly_dev_score: isSingleSnap ? 0 : Math.max(0, (latest.dev_score || 0) - (baseline.dev_score || 0)),
-        monthly_problems_solved: isSingleSnap ? 0 : Math.max(0, latestSolved - baseSolved),
-        monthly_commits: isSingleSnap ? 0 : Math.max(0, getCommits(latest) - getCommits(baseline)),
-        monthly_prs: isSingleSnap ? 0 : Math.max(0, (latest.github_prs || 0) - (baseline.github_prs || 0)),
+        monthly_dsa_score: monthly_problems_solved,
+        monthly_dev_score: monthly_commits + monthly_prs,
+        monthly_problems_solved,
+        monthly_commits,
+        monthly_prs,
         current_streak: latest.current_streak || 0,
       });
     }
