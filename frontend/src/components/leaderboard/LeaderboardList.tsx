@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import type { LeaderboardMember } from "../../hooks/useLeaderboard";
+import AvatarImage from "../ui/AvatarImage";
 
 interface LeaderboardListProps {
   members: LeaderboardMember[];
@@ -65,12 +66,8 @@ export default function LeaderboardList({ members, sortMode = 'GLOBAL' }: Leader
                 {/* Desktop Scorecard Tooltip on Hover */}
                 <div className="absolute right-2 md:right-12 -top-24 md:-top-28 hidden md:flex opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 pointer-events-none scale-95 group-hover:scale-100 transition-all duration-200 z-[999] bg-white border-4 border-slate-900 brutalist-shadow flex-col p-4 w-72 text-left">
                   <div className="flex items-center gap-3 border-b-2 border-slate-200 pb-2 mb-2">
-                    <div className="w-10 h-10 border-2 border-slate-900 bg-slate-100 flex items-center justify-center font-black text-slate-900 overflow-hidden">
-                       {member.avatar_url ? (
-                         <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
-                       ) : (
-                         member.full_name ? member.full_name.charAt(0).toUpperCase() : member.handle?.charAt(0).toUpperCase()
-                       )}
+                    <div className="w-10 h-10 border-2 border-slate-900 bg-slate-100 flex items-center justify-center font-black text-slate-900 overflow-hidden flex-shrink-0">
+                      <AvatarImage url={member.avatar_url} handle={member.handle} name={member.full_name} />
                     </div>
                     <div>
                       <div className="font-black text-sm md:text-base text-slate-900 truncate">{member.full_name || member.handle}</div>
@@ -100,13 +97,7 @@ export default function LeaderboardList({ members, sortMode = 'GLOBAL' }: Leader
                 <div className="flex items-center justify-between gap-2 min-w-0">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-9 h-9 sm:w-12 sm:h-12 border-2 border-slate-900 overflow-hidden bg-white flex-shrink-0 flex items-center justify-center">
-                      {member.avatar_url ? (
-                        <img src={member.avatar_url} alt={member.handle} className="w-full h-full object-cover transition-all" />
-                      ) : (
-                        <span className="font-black text-lg sm:text-xl text-slate-900">
-                          {member.full_name ? member.full_name.charAt(0).toUpperCase() : member.handle?.charAt(0).toUpperCase()}
-                        </span>
-                      )}
+                      <AvatarImage url={member.avatar_url} handle={member.handle} name={member.full_name} />
                     </div>
                     <div className="flex flex-col min-w-0 truncate">
                       <span className="font-black text-slate-900 truncate text-sm sm:text-lg tracking-tight">
