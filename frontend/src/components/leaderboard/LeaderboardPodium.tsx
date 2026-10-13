@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import type { LeaderboardMember } from "../../hooks/useLeaderboard";
+import AvatarImage from "../ui/AvatarImage";
 
 interface LeaderboardPodiumProps {
   members: LeaderboardMember[];
@@ -95,11 +96,7 @@ export default function LeaderboardPodium({ members, sortMode = 'GLOBAL' }: Lead
               <div className="absolute -top-32 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 pointer-events-none scale-95 group-hover:scale-100 transition-all duration-200 z-[999] bg-white border-4 border-slate-900 brutalist-shadow flex-col p-4 w-72 text-left hidden sm:flex">
                 <div className="flex items-center gap-3 border-b-2 border-slate-200 pb-2 mb-2">
                   <div className="w-10 h-10 border-2 border-slate-900 bg-slate-100 flex items-center justify-center font-black text-slate-900 overflow-hidden flex-shrink-0">
-                     {member.avatar_url ? (
-                       <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
-                     ) : (
-                       <span className="text-base">{member.full_name ? member.full_name.charAt(0).toUpperCase() : member.handle?.charAt(0).toUpperCase()}</span>
-                     )}
+                    <AvatarImage url={member.avatar_url} handle={member.handle} name={member.full_name} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-black text-sm text-slate-900 truncate leading-tight">{member.full_name || member.handle}</div>
@@ -142,14 +139,8 @@ export default function LeaderboardPodium({ members, sortMode = 'GLOBAL' }: Lead
                 <div
                   className={`w-14 h-14 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full border-2 sm:border-4 border-slate-900 bg-white p-0.5 sm:p-1 relative z-10 ${config.shadow} transition-all duration-300 group-hover:scale-105 ${config.glowRing}`}
                 >
-                  <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 border sm:border-2 border-slate-900 flex items-center justify-center relative">
-                    {member.avatar_url ? (
-                      <img src={member.avatar_url} alt={member.handle} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xl sm:text-4xl md:text-5xl font-black text-slate-900">
-                        {member.full_name ? member.full_name.charAt(0).toUpperCase() : member.handle?.charAt(0).toUpperCase()}
-                      </span>
-                    )}
+                  <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 border sm:border-2 border-slate-900 flex items-center justify-center relative font-black text-xl sm:text-4xl md:text-5xl text-slate-900">
+                    <AvatarImage url={member.avatar_url} handle={member.handle} name={member.full_name} />
                   </div>
                 </div>
 
